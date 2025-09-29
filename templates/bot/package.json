@@ -1,0 +1,32 @@
+{
+  "name": "{{kebabName}}",
+  "version": "1.0.0",
+  "description": "{{description}}",
+  "main": "bot.ts",
+  "scripts": {
+    "dev": "bun --watch bot.ts",
+    "start": "bun bot.ts",
+    "build": "bun build bot.ts --outdir ./dist",
+    "migrate": "bun database/migrate.ts",
+    "artisan": "bun artisan.ts",
+    "seed": "bun database/seed.ts",
+    "seed:clear": "bun database/seed.ts --clear",
+    "seed:clean": "bun database/seed.ts --clean-only"
+  },
+  "keywords": [
+    "telegram",
+    "bot",
+    "2byte"
+  ],
+  "author": "{{author}}",
+  "license": "MIT",
+  "dependencies": {
+    "2bytetgbot": "^1.0.0",
+    "dotenv": "^16.6.1"
+  },
+  "devDependencies": {
+    "@types/node": "^20.19.8",
+    "bun-types": "^1.2.18",
+    "typescript": "^5.8.3"
+  }
+}
