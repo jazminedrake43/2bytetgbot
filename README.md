@@ -1,60 +1,51 @@
-# 2byte Telegram Bot Framework
+# @2byte/tgbot-framework
 
-🚀 A TypeScript framework and CLI for creating Telegram bots with sections-based architecture.
+🚀 TypeScript framework для создания Telegram ботов с sections-based архитектурой, оптимизированный для **Bun**.
 
-## Features
+## 🎯 Концепция
 
-- 🎯 **Sections-based architecture** - Organize bot logic into manageable sections
-- 🛠️ **CLI tools** - Generate bots, sections, and migrations with simple commands
-- 🗃️ **Database migrations** - SQLite database migrations with up/down support
-- 🌱 **Database seeding** - Populate database with test data
-- 📦 **Template system** - Pre-built templates for rapid development
-- 🎨 **TypeScript support** - Full TypeScript support out of the box
-- ⚡ **Bun runtime** - Optimized for Bun JavaScript runtime
+Это **npm библиотека** которая предоставляет:
+- 🏗️ **Framework** для создания ботов
+- 🛠️ **CLI инструменты** для генерации кода
+- � **Готовые компоненты** (Section, Migration, Artisan)
+- 🎨 **TypeScript типы** из коробки
 
-## Installation
-
-### Global CLI Installation
+## 📦 Установка
 
 ```bash
-npm install -g 2bytetgbot
+# Глобальная установка для CLI
+bun add -g @2byte/tgbot-framework
+
+# Или локальная установка в проект
+bun add @2byte/tgbot-framework
 ```
 
-### Local Project Installation
+## 🚀 Быстрый старт
+
+### 1. Создание нового бота
 
 ```bash
-npm install 2bytetgbot
-# or
-bun add 2bytetgbot
-```
-
-## Quick Start
-
-### 1. Create a New Bot
-
-```bash
-2byte create-bot my-awesome-bot
+# Создать новый бот с помощью CLI
+2byte-bot create my-awesome-bot
 cd my-awesome-bot
-```
 
-### 2. Configure Environment
-
-```bash
+# Настроить окружение
 cp .env.example .env
-# Edit .env and add your BOT_TOKEN from @BotFather
-```
+# Добавить BOT_TOKEN в .env
 
-### 3. Run Migrations and Seed Database
-
-```bash
-bun run migrate
-bun run seed
-```
-
-### 4. Start Your Bot
-
-```bash
+# Установить зависимости и запустить
+bun install
 bun run dev
+```
+
+### 2. Использование в существующем проекте
+
+```bash
+# Установить фреймворк
+bun add @2byte/tgbot-framework
+
+# Инициализировать структуру
+2byte-bot init
 ```
 
 ## CLI Commands
