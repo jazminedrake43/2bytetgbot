@@ -6,7 +6,7 @@ export { Section } from './illumination/Section';
 export { Artisan } from './illumination/Artisan';
 export { Migration } from './illumination/Migration';
 export { InlineKeyboard } from './illumination/InlineKeyboard';
-export { Message2Byte } from './illumination/Message2Byte';
+export { default as Message2Byte } from './illumination/Message2Byte';
 export { RunSectionRoute } from './illumination/RunSectionRoute';
 export { SectionComponent } from './illumination/SectionComponent';
 export { Telegraf2byteContext } from './illumination/Telegraf2byteContext';

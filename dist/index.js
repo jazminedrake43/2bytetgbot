@@ -13,6 +13,9 @@ var __createBinding = (this && this.__createBinding) || (Object.create ? (functi
 var __exportStar = (this && this.__exportStar) || function(m, exports) {
     for (var p in m) if (p !== "default" && !Object.prototype.hasOwnProperty.call(exports, p)) __createBinding(exports, m, p);
 };
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.UserStore = exports.UserModel = exports.GenerateCommand = exports.InitCommand = exports.CreateBotCommand = exports.setupMigrations = exports.SectionComponent = exports.RunSectionRoute = exports.Message2Byte = exports.InlineKeyboard = exports.Migration = exports.Artisan = exports.Section = exports.BotSeeder = exports.BotMigration = exports.BotArtisan = exports.App = void 0;
 // Core classes
@@ -34,7 +37,7 @@ Object.defineProperty(exports, "Migration", { enumerable: true, get: function ()
 var InlineKeyboard_1 = require("./illumination/InlineKeyboard");
 Object.defineProperty(exports, "InlineKeyboard", { enumerable: true, get: function () { return InlineKeyboard_1.InlineKeyboard; } });
 var Message2Byte_1 = require("./illumination/Message2Byte");
-Object.defineProperty(exports, "Message2Byte", { enumerable: true, get: function () { return Message2Byte_1.Message2Byte; } });
+Object.defineProperty(exports, "Message2Byte", { enumerable: true, get: function () { return __importDefault(Message2Byte_1).default; } });
 var RunSectionRoute_1 = require("./illumination/RunSectionRoute");
 Object.defineProperty(exports, "RunSectionRoute", { enumerable: true, get: function () { return RunSectionRoute_1.RunSectionRoute; } });
 var SectionComponent_1 = require("./illumination/SectionComponent");
