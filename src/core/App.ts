@@ -183,7 +183,7 @@ export class App {
     });
 
     this.registerActionForCallbackQuery();
-    // this.registerHears();
+    this.registerHears();
     this.registerCommands();
     this.registerMessageHandlers();
 
@@ -196,9 +196,9 @@ export class App {
     }
 
     this.bot.catch((err) => {
-      console.error("Error in bot:", err);
+      this.debugLog("Error in bot:", err);
       if (this.config.debug && err instanceof Error) {
-        console.error("Stack trace:", err.stack);
+        this.debugLog("Stack trace:", err.stack);
       }
     });
 
@@ -302,7 +302,9 @@ export class App {
           .method(method)
           .actionPath(actionPath);
 
-        this.runSection(ctx, sectionRoute);
+        this.runSection(ctx, sectionRoute).catch((err) => {
+          this.debugLog("Error running section:", err);
+        });
       }
     });
   }
@@ -311,12 +313,15 @@ export class App {
     // Register hears
     Object.entries(this.config.hears).forEach(([key, sectionMethod]) => {
       this.bot.hears(key, async (ctx: Telegraf2byteContext) => {
-        const user = ctx.user;
-
+        
         const [sectionId, method] = sectionMethod.split(".");
         const sectionRoute = new RunSectionRoute().section(sectionId).method(method).hearsKey(key);
+        
+        this.debugLog(`Hears matched: ${key}, running section ${sectionId}, method ${method}`);
 
-        await this.runSection(ctx, sectionRoute);
+        this.runSection(ctx, sectionRoute).catch((err) => {
+          this.debugLog("Error running section:", err);
+        });
       });
     });
   }
@@ -1001,7 +1006,7 @@ export class App {
     return this.config.sections;
   }
 
-  get components(): Record<string, string> {
-    return this.config.components;
+  get config(): AppConfig {
+    return this.config;
   }
 }

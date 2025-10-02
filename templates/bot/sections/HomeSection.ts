@@ -1,4 +1,4 @@
-import { Section, SectionOptions, InlineKeyboard } from '2bytetgbot';
+import { Section, SectionOptions, InlineKeyboard } from "@2byte/tgbot-framework";
 
 export default class HomeSection extends Section {
   static command = "home";

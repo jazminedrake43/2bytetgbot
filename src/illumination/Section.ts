@@ -12,7 +12,7 @@ export class Section {
   static command: string;
   static description: string;
   static actionRoutes: { [key: string]: string };
-  public sectionId: string = 'BaseSection';
+  public sectionId: string = "BaseSection";
   protected ctx: Telegraf2byteContext;
   protected bot: Telegraf<Telegraf2byteContext>;
   protected app: App;
@@ -43,6 +43,7 @@ export class Section {
     this.ctx = options.ctx;
     this.bot = options.bot;
     this.app = options.app;
+    this.mainMenuKeyboardArray = this.app.config.mainMenuKeyboard;
     this.route = options.route;
     this.db = (global as any).db as Database;
     this.callbackParams = this.parseParamsCallbackdata();
@@ -158,9 +159,7 @@ export class Section {
     return layoutButtons;
   }
 
-  public static makeManualPaginateButtons(
-    params: MakeManualPaginateButtonsParams,
-  ): any[][] {
+  public static makeManualPaginateButtons(params: MakeManualPaginateButtonsParams): any[][] {
     let { callbackDataAction, currentPage, totalRecords, perPage, paramsQuery } = params;
 
     currentPage = parseInt(String(currentPage));
@@ -260,19 +259,18 @@ export class Section {
     return isEquals;
   }
 
-  useWithPhoto(pathPhoto: string): void {
-    (this as any).pathPhoto = pathPhoto;
-    (this as any).useReplyWithPhoto = true;
-  }
+  async setupKeyboard(): Promise<void> {
+    if (this.ctx.userSession.setupKeyboardDone) return;
+    
+    await this.newMessage("Welcome!")
+      .keyboard({
+        keyboard: this.mainMenuKeyboardArray,
+        resize_keyboard: true,
+        one_time_keyboard: true,
+      })
+      .send();
 
-  setMainMenuKeyboard(data: any[][]): this {
-    this.mainMenuKeyboardArray = data;
-    console.log("mainMenu", this.mainMenuKeyboardArray);
-    return this;
-  }
-
-  mainMenuKeyboard(): any {
-    return Markup.keyboard(this.mainMenuKeyboardArray);
+    this.ctx.userSession.setupKeyboardDone = true;
   }
 
   async getSetting(name: string): Promise<any> {

@@ -1,5 +1,6 @@
 import { Telegraf2byteContext } from "./Telegraf2byteContext";
 import { Input, Markup } from "telegraf";
+import { ReplyKeyboardMarkup } from 'telegraf/core/types/telegram';
 import { InlineKeyboard } from "./InlineKeyboard";
 import { RequestInputOptions } from "../types";
 import { Message } from "telegraf/types";
@@ -43,6 +44,15 @@ export default class Message2byte {
 
   extra(extra: Object): this {
     this.messageExtra = extra;
+    return this;
+  }
+
+  keyboard(keyboard: ReplyKeyboardMarkup): this {
+    this.messageExtra.reply_markup = {
+      keyboard: keyboard.keyboard,
+      resize_keyboard: keyboard.resize_keyboard,
+      one_time_keyboard: keyboard.one_time_keyboard,
+    };
     return this;
   }
 
