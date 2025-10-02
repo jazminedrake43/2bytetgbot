@@ -1,10 +1,10 @@
-#!/usr/bin/env node
+#!/usr/bin/env bun
 
-const { Command } = require('commander');
-const { CreateBotCommand } = require('../dist/cli/CreateBotCommand');
-const { InitCommand } = require('../dist/cli/InitCommand');
-const { GenerateCommand } = require('../dist/cli/GenerateCommand');
-const chalk = require('chalk');
+import { Command } from 'commander';
+import { CreateBotCommand } from '../src/cli/CreateBotCommand';
+import { InitCommand } from'../src/cli/InitCommand';
+import { GenerateCommand } from '../src/cli/GenerateCommand';
+import chalk from 'chalk';
 
 const program = new Command();
 

@@ -5,13 +5,13 @@
   "main": "src/index.ts",
   "types": "src/index.ts",
   "bin": {
-    "2byte-bot": "./bin/2byte-cli.js"
+    "2byte-bot": "./bin/2byte-cli.ts"
   },
   "scripts": {
     "dev": "bun --watch src/index.ts",
     "test": "bun test",
     "build": "tsc",
-    "cli": "node ./bin/2byte-cli.js",
+    "cli": "bun ./bin/2byte-cli.ts",
     "pack": "npm pack",
     "publish:npm": "npm publish"
   },
@@ -27,9 +27,11 @@
   "license": "MIT",
   "dependencies": {
     "dotenv": "^16.6.1",
+    "inquirer": "^12.9.6",
+    "mustache": "^4.2.0",
+    "socks": "^2.8.6",
     "telegraf": "^4.16.3",
-    "telegram": "^2.26.22",
-    "socks": "^2.8.6"
+    "telegram": "^2.26.22"
   },
   "devDependencies": {
     "@types/node": "^20.19.8",
@@ -38,7 +40,7 @@
   },
   "files": [
     "src/**/*",
-    "cli/**/*", 
+    "cli/**/*",
     "templates/**/*",
     "README.md"
   ]

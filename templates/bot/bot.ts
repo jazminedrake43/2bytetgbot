@@ -1,9 +1,8 @@
-import 'dotenv/config';
-import { App } from '2bytetgbot';
-import { UserStore } from "2bytetgbot";
-import { sectionList } from "2bytetgbot";
+import { App } from '@2byte/tgbot-framework';
+import { UserStore } from "@2byte/tgbot-framework";
+import { sectionList } from "./sectionList";
 import { Database } from 'bun:sqlite';
-import { EnvVars } from "2bytetgbot";
+import { EnvVars } from "@2byte/tgbot-framework";
 
 if (import.meta.dirname === undefined) {
   throw new Error("import.meta.dirname is not defined. Ensure you are using a module environment.");
