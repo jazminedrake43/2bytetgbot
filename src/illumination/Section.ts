@@ -364,23 +364,29 @@ export class Section {
     if (this.route.runIsCallbackQuery) {
       return this.updateMessage(message);
     }
-    return Message2byte.init(this.ctx).message(message);
+    return Message2byte.init(this.ctx, this).message(message);
   }
 
   newMessage(message: string): Message2byte {
-    return Message2byte.init(this.ctx).message(message);
+    return Message2byte.init(this.ctx, this).message(message);
   }
 
   updateMessage(message: string): Message2byte {
-    return Message2byte.init(this.ctx).updateMessage(message);
+    return Message2byte.init(this.ctx, this).updateMessage(message);
   }
 
-  createPoolMessage(message: string): Message2bytePool {
+  createPoolNewMessage(message: string): Message2bytePool {
     return Message2byte.init(this.ctx, this).createPoolMessage(message);
   }
 
   createUpdatePoolMessage(message: string): Message2bytePool {
     return Message2byte.init(this.ctx, this).createUpdatePoolMessage(message);
+  }
+
+  createPoolMessage(message: string): Message2bytePool {
+    return this.route.runIsCallbackQuery
+      ? this.createUpdatePoolMessage(message)
+      : this.createPoolNewMessage(message);
   }
 
   getCtx(): Telegraf2byteContext {
