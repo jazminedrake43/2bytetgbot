@@ -5,6 +5,7 @@ import { App } from "../core/App";
 import { MakeManualPaginateButtonsParams, RunnedSection, SectionOptions } from "../types";
 import { InlineKeyboard } from "./InlineKeyboard";
 import Message2byte from "./Message2Byte";
+import Message2bytePool from "./Message2bytePool";
 import { RunSectionRoute } from "./RunSectionRoute";
 import { Telegraf2byteContext } from "./Telegraf2byteContext";
 
@@ -13,10 +14,10 @@ export class Section {
   static description: string;
   static actionRoutes: { [key: string]: string };
   public sectionId: string = "BaseSection";
+  public route: RunSectionRoute;
   protected ctx: Telegraf2byteContext;
   protected bot: Telegraf<Telegraf2byteContext>;
   protected app: App;
-  protected route: RunSectionRoute;
   protected markup: typeof Markup = Markup;
   protected btnHome = this.markup.button.callback("🏠 Лобби", "home.index");
   protected iconBack: string = "🔙";
@@ -261,7 +262,7 @@ export class Section {
 
   async setupKeyboard(): Promise<void> {
     if (this.ctx.userSession.setupKeyboardDone) return;
-    
+
     await this.newMessage("Welcome!")
       .keyboard({
         keyboard: this.mainMenuKeyboardArray,
@@ -374,6 +375,14 @@ export class Section {
     return Message2byte.init(this.ctx).updateMessage(message);
   }
 
+  createPoolMessage(message: string): Message2bytePool {
+    return Message2byte.init(this.ctx, this).createPoolMessage(message);
+  }
+
+  createUpdatePoolMessage(message: string): Message2bytePool {
+    return Message2byte.init(this.ctx, this).createUpdatePoolMessage(message);
+  }
+
   getCtx(): Telegraf2byteContext {
     return this.ctx;
   }
@@ -385,4 +394,31 @@ export class Section {
   getPreviousSection(): RunnedSection | undefined {
     return this.ctx.userSession.previousSection;
   }
+
+  async sleepProgressBar(messageWait: string, ms: number): Promise<void> {
+      const { promise, resolve, reject } = Promise.withResolvers<void>();
+      const pgIcons = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"];
+
+      let pgIndex = 0;
+      message += `[pg]${pgIcons[pgIndex]} ${message}`;
+
+      const pgIntervalTimer = setInterval(() => {
+        // Update progress message here
+        message = message.replace(/\[pg\].*/, `[pg]${pgIcons[pgIndex]} ${messageWait}`);
+        pgIndex = (pgIndex + 1) % pgIcons.length;
+
+        this.message(message)
+          .send()
+          .catch((err) => {
+            clearInterval(pgIntervalTimer);
+            reject(err);
+          });
+      }, 1000);
+      setTimeout(() => {
+        message = message.replace(/\[pg\].*/, ``);
+        clearInterval(pgIntervalTimer);
+        resolve();
+      }, ms);
+      return promise;
+    };
 }

@@ -1,9 +1,11 @@
 import { Telegraf2byteContext } from "./Telegraf2byteContext";
 import { Input, Markup } from "telegraf";
-import { ReplyKeyboardMarkup } from 'telegraf/core/types/telegram';
+import type { ReplyKeyboardMarkup } from 'telegraf/core/types/telegram';
 import { InlineKeyboard } from "./InlineKeyboard";
 import { RequestInputOptions } from "../types";
 import { Message } from "telegraf/types";
+import Message2bytePool from "./Message2bytePool";
+import { Section } from "./Section";
 
 export default class Message2byte {
   public messageValue: string = "";
@@ -12,13 +14,17 @@ export default class Message2byte {
   private ctx: Telegraf2byteContext;
   private imagePath: string | null = null;
   private imageCaption: string | null = null;
+  private messageId: number | null = null;
+  private doAnswerCbQuery: boolean = true;
+  private section: Section;
 
-  constructor(ctx: Telegraf2byteContext) {
+  constructor(ctx: Telegraf2byteContext, section: Section) {
     this.ctx = ctx;
+    this.section = section;
   }
 
-  static init(ctx: Telegraf2byteContext) {
-    return new Message2byte(ctx);
+  static init(ctx: Telegraf2byteContext, section: Section) {
+    return new Message2byte(ctx, section);
   }
 
   message(message: string): this {
@@ -26,9 +32,22 @@ export default class Message2byte {
     return this;
   }
 
+  createPoolMessage(message: string): Message2bytePool {
+    this.doAnswerCbQuery = false;
+    this.messageValue = message;
+    return Message2bytePool.init(this, this.ctx, this.section);
+  }
+
+  createUpdatePoolMessage(message: string): Message2bytePool {
+    this.isUpdate = true;
+    this.messageValue = message;
+    return Message2bytePool.init(this, this.ctx, this.section);
+  }
+
   updateMessage(message: string): this {
     this.messageValue = message;
     this.isUpdate = true;
+    this.messageExtra.message_id &&= this.messageId;
     return this;
   }
 
@@ -158,18 +177,51 @@ export default class Message2byte {
     return this;
   }
 
+  editMessageCaption(message: string, extra: any = {}) {
+    return this.ctx.editMessageCaption(message, extra);
+  }
+
+  editMessageText(message: string, extra: any = {}) {
+    return this.ctx.editMessageText(message, extra);
+  }
+
   async send() {
     if (this.isUpdate) {
-      await this.ctx.answerCbQuery();
+      if (this.section.route.runIsCallbackQuery) {
+        await this.ctx.answerCbQuery();
+      }
 
       const message = this.ctx.callbackQuery?.message as Message;
-
+      
       if (message) {
         if ('media_group_id' in message || 'caption' in message) {
-          return this.ctx.editMessageCaption(this.messageValue, this.messageExtra);
+          const editMessageCaption = this.editMessageCaption(this.messageValue, this.messageExtra);
+
+          if (editMessageCaption && 'message_id' in editMessageCaption) {
+            this.messageId = editMessageCaption.message_id as number;
+          }
+
+          return editMessageCaption;
         } else {
-          return this.ctx.editMessageText(this.messageValue, this.messageExtra);
+
+          const editedText = this.editMessageText(this.messageValue, this.messageExtra);
+
+          if (editedText && 'message_id' in editedText) {
+            this.messageId = editedText.message_id as number;
+          }
+
+          return editedText;
         }
+      } else {
+        this.messageExtra.message_id = this.messageId;
+
+        const messageEntity = await this.editMessageText(this.messageValue, this.messageExtra);
+
+        if (typeof messageEntity === "object" && 'message_id' in messageEntity) {
+          this.messageId = messageEntity.message_id as number;
+        }
+
+        return messageEntity;
       }
     }
 
@@ -177,6 +229,21 @@ export default class Message2byte {
       return this.ctx.replyWithPhoto(Input.fromLocalFile(this.imagePath), this.messageExtra);
     }
 
-    return this.ctx.reply(this.messageValue, this.messageExtra);
+    const replyEntity = this.ctx.reply(this.messageValue, this.messageExtra);
+
+    this.messageId = (await replyEntity).message_id;
+
+    return replyEntity;
+  }
+
+  sendReturnThis(): this {
+    this.send();
+    return this;
+  }
+
+  setMessageId(messageId: number): this {
+    this.messageId = messageId;
+    this.messageExtra.message_id = messageId;
+    return this;
   }
 }
