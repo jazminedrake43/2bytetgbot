@@ -27,6 +27,11 @@ export default class Message2byte {
     return new Message2byte(ctx, section);
   }
 
+  setNotAnswerCbQuery(): this {
+    this.doAnswerCbQuery = false;
+    return this;
+  }
+
   message(message: string): this {
     this.messageValue = message;
     return this;
@@ -187,7 +192,7 @@ export default class Message2byte {
 
   async send() {
     if (this.isUpdate) {
-      if (this.section.route.runIsCallbackQuery) {
+      if (this.section.route.runIsCallbackQuery && this.doAnswerCbQuery) {
         await this.ctx.answerCbQuery();
       }
 

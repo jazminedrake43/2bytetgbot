@@ -5,6 +5,7 @@ interface ProgressiveItem {
   id: number;
   text: string;
   status?: 'pending' | 'active' | 'completed' | 'error';
+  caption?: string;
   progressBar?: {
     active: boolean;
     duration?: number;
@@ -66,6 +67,22 @@ export default class Message2ByteLiveProgressive {
     return this;
   }
 
+  setItemCaption(id: number, caption: string): this {
+    const item = this.items.get(id);
+    if (item) {
+      item.caption = caption;
+    }
+    return this;
+  }
+
+  changeItemCaption(id: number, caption: string): this {
+    const item = this.items.get(id);
+    if (item) {
+      item.caption = caption;
+    }
+    return this;
+  }
+
   /**
    * Удаляет пункт по ID
    */
@@ -85,10 +102,32 @@ export default class Message2ByteLiveProgressive {
     return this;
   }
 
+  setItemStatusError(id: number, errorText?: string): this {
+    const item = this.items.get(id);
+    if (item) {
+      item.status = 'error';
+      if (errorText) {
+        item.text += ` - ${errorText}`;
+      }
+    }
+    return this;
+  }
+
+  setItemStatusCompleted(id: number): this {
+    const item = this.items.get(id);
+    if (item) {
+      item.status = 'completed';
+    }
+    return this;
+  }
+
   /**
    * Запускает прогрессбар для конкретного пункта
    */
   sleepProgressBar(duration?: number, itemId?: number): this {
+    if (!itemId) {
+      itemId = this.items.size > 0 ? Array.from(this.items.keys())[this.items.size - 1] : undefined;
+    }
     if (itemId) {
       this.activeProgressItem = itemId;
       const item = this.items.get(itemId);
@@ -122,6 +161,8 @@ export default class Message2ByteLiveProgressive {
         item.status = 'completed';
       }
       this.activeProgressItem = undefined;
+      this.updateMessage();
+      this.message2bytePool.send();
     }
 
     return this;
@@ -138,6 +179,7 @@ export default class Message2ByteLiveProgressive {
     this.progressBarTimer = setInterval(() => {
       this.progressBarIndex = (this.progressBarIndex + 1) % this.progressBarIcons.length;
       this.updateMessage();
+      this.message2bytePool.send();
     }, 200);
 
     if (duration) {
@@ -164,6 +206,16 @@ export default class Message2ByteLiveProgressive {
         const progressIcon = this.getProgressIcon(item);
         
         message += `${statusIcon} ${item.text}${progressIcon}\n`;
+
+        if (item.caption) {
+          if (this.message2byte.messageExtra && this.message2byte.messageExtra.parse_mode === 'html') {
+            message += `   <i>${item.caption}</i>\n`;
+          } else if (this.message2byte.messageExtra && this.message2byte.messageExtra.parse_mode === 'markdown') {
+            message += `   _${item.caption}_\n`;
+          } else {
+            message += `   ${item.caption}\n`;
+          }
+        }
       });
     }
 

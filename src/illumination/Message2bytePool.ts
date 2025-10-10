@@ -14,6 +14,7 @@ export default class Message2bytePool {
 
     constructor(message2byte: Message2byte, ctx: Telegraf2byteContext, section: Section) {
         this.message2byte = message2byte;
+        this.message2byte.setNotAnswerCbQuery();
         this.ctx = ctx;
         this.section = section;
     }
