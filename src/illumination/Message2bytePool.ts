@@ -19,6 +19,16 @@ export default class Message2bytePool {
         this.section = section;
     }
 
+    markdown(): this {
+        this.message2byte.markdown();
+        return this;
+    }
+
+    html(): this {
+        this.message2byte.html();
+        return this;
+    }
+    
     message(message: string): this {
         this.messageValue = message;
         if (this.section.route.runIsCallbackQuery) {
