@@ -39,7 +39,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.CreateBotCommand = void 0;
 const fs = __importStar(require("fs-extra"));
 const path = __importStar(require("path"));
-const inquirer = __importStar(require("inquirer"));
+const inquirer_1 = __importDefault(require("inquirer"));
 const chalk_1 = __importDefault(require("chalk"));
 const mustache_1 = __importDefault(require("mustache"));
 class CreateBotCommand {
@@ -51,7 +51,7 @@ class CreateBotCommand {
         const targetPath = path.join(options.path, botName);
         // Check if directory already exists
         if (await fs.pathExists(targetPath)) {
-            const { overwrite } = await inquirer.prompt([
+            const { overwrite } = await inquirer_1.default.prompt([
                 {
                     type: 'confirm',
                     name: 'overwrite',
@@ -110,7 +110,7 @@ class CreateBotCommand {
                 default: true,
             },
         ];
-        const answers = await inquirer.prompt(questions);
+        const answers = await inquirer_1.default.prompt(questions);
         return {
             botName,
             ...answers,

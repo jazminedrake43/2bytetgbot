@@ -5,6 +5,7 @@ import { App } from "../core/App";
 import { MakeManualPaginateButtonsParams, RunnedSection, SectionOptions } from "../types";
 import { InlineKeyboard } from "./InlineKeyboard";
 import Message2byte from "./Message2Byte";
+import Message2bytePool from "./Message2bytePool";
 import { RunSectionRoute } from "./RunSectionRoute";
 import { Telegraf2byteContext } from "./Telegraf2byteContext";
 export declare class Section {
@@ -14,10 +15,10 @@ export declare class Section {
         [key: string]: string;
     };
     sectionId: string;
+    route: RunSectionRoute;
     protected ctx: Telegraf2byteContext;
     protected bot: Telegraf<Telegraf2byteContext>;
     protected app: App;
-    protected route: RunSectionRoute;
     protected markup: typeof Markup;
     protected btnHome: import("@telegraf/types").InlineKeyboardButton.CallbackButton & {
         hide: boolean;
@@ -49,9 +50,7 @@ export declare class Section {
     makePaginateButtons(metadata: any, callbackDataAction: string, paramsQuery?: Record<string, any>): any[][];
     static makeManualPaginateButtons(params: MakeManualPaginateButtonsParams): any[][];
     isRepeatedQuery(objParamsNeedle: Record<string, any>): boolean;
-    useWithPhoto(pathPhoto: string): void;
-    setMainMenuKeyboard(data: any[][]): this;
-    mainMenuKeyboard(): any;
+    setupKeyboard(): Promise<void>;
     getSetting(name: string): Promise<any>;
     cancelUserWaitingReply(): boolean;
     backInlineButtion(data: string): any;
@@ -66,7 +65,11 @@ export declare class Section {
     message(message: string): Message2byte;
     newMessage(message: string): Message2byte;
     updateMessage(message: string): Message2byte;
+    createPoolNewMessage(message: string): Message2bytePool;
+    createUpdatePoolMessage(message: string): Message2bytePool;
+    createPoolMessage(message: string): Message2bytePool;
     getCtx(): Telegraf2byteContext;
     getCurrentSection(): RunnedSection;
     getPreviousSection(): RunnedSection | undefined;
+    sleepProgressBar(messageWait: string, ms: number): Promise<void>;
 }

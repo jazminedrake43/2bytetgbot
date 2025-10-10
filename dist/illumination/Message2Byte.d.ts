@@ -1,7 +1,10 @@
 import { Telegraf2byteContext } from "./Telegraf2byteContext";
+import type { ReplyKeyboardMarkup } from 'telegraf/core/types/telegram';
 import { InlineKeyboard } from "./InlineKeyboard";
 import { RequestInputOptions } from "../types";
 import { Message } from "telegraf/types";
+import Message2bytePool from "./Message2bytePool";
+import { Section } from "./Section";
 export default class Message2byte {
     messageValue: string;
     messageExtra: any;
@@ -9,16 +12,26 @@ export default class Message2byte {
     private ctx;
     private imagePath;
     private imageCaption;
-    constructor(ctx: Telegraf2byteContext);
-    static init(ctx: Telegraf2byteContext): Message2byte;
+    private messageId;
+    private doAnswerCbQuery;
+    private section;
+    constructor(ctx: Telegraf2byteContext, section: Section);
+    static init(ctx: Telegraf2byteContext, section: Section): Message2byte;
     message(message: string): this;
+    createPoolMessage(message: string): Message2bytePool;
+    createUpdatePoolMessage(message: string): Message2bytePool;
     updateMessage(message: string): this;
     markdown(): this;
     html(): this;
     extra(extra: Object): this;
+    keyboard(keyboard: ReplyKeyboardMarkup): this;
     inlineKeyboard(keyboard: [][] | InlineKeyboard): this;
     requestInput(inputKey: string, options?: RequestInputOptions): this;
     requestInputWithAwait(inputKey: string, options?: RequestInputOptions): Promise<string | any>;
     image(pathImage: string): this;
+    editMessageCaption(message: string, extra?: any): Promise<true | (import("telegraf/types").Update.Edited & Message.CaptionableMessage)>;
+    editMessageText(message: string, extra?: any): Promise<true | (import("telegraf/types").Update.Edited & Message.TextMessage)>;
     send(): Promise<true | Message.TextMessage | Message.PhotoMessage | (import("telegraf/types").Update.Edited & Message.CaptionableMessage)>;
+    sendReturnThis(): this;
+    setMessageId(messageId: number): this;
 }

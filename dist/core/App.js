@@ -85,7 +85,7 @@ class App {
             middleware();
         });
         this.registerActionForCallbackQuery();
-        // this.registerHears();
+        this.registerHears();
         this.registerCommands();
         this.registerMessageHandlers();
         return this;
@@ -95,9 +95,9 @@ class App {
             throw new Error("Bot is not initialized");
         }
         this.bot.catch((err) => {
-            console.error("Error in bot:", err);
+            this.debugLog("Error in bot:", err);
             if (this.config.debug && err instanceof Error) {
-                console.error("Stack trace:", err.stack);
+                this.debugLog("Stack trace:", err.stack);
             }
         });
         await this.bot.launch(this.config.telegrafConfigLaunch || {});
@@ -172,7 +172,9 @@ class App {
                     .section(sectionId)
                     .method(method)
                     .actionPath(actionPath);
-                this.runSection(ctx, sectionRoute);
+                this.runSection(ctx, sectionRoute).catch((err) => {
+                    this.debugLog("Error running section:", err);
+                });
             }
         });
     }
@@ -180,10 +182,12 @@ class App {
         // Register hears
         Object.entries(this.config.hears).forEach(([key, sectionMethod]) => {
             this.bot.hears(key, async (ctx) => {
-                const user = ctx.user;
                 const [sectionId, method] = sectionMethod.split(".");
                 const sectionRoute = new RunSectionRoute_1.RunSectionRoute().section(sectionId).method(method).hearsKey(key);
-                await this.runSection(ctx, sectionRoute);
+                this.debugLog(`Hears matched: ${key}, running section ${sectionId}, method ${method}`);
+                this.runSection(ctx, sectionRoute).catch((err) => {
+                    this.debugLog("Error running section:", err);
+                });
             });
         });
     }
@@ -707,8 +711,8 @@ class App {
     get sections() {
         return this.config.sections;
     }
-    get components() {
-        return this.config.components;
+    get config() {
+        return this.config;
     }
 }
 exports.App = App;

@@ -10,7 +10,7 @@ const InlineKeyboard_1 = require("./InlineKeyboard");
 const Message2Byte_1 = __importDefault(require("./Message2Byte"));
 class Section {
     constructor(options) {
-        this.sectionId = 'BaseSection';
+        this.sectionId = "BaseSection";
         this.markup = telegraf_1.Markup;
         this.btnHome = this.markup.button.callback("🏠 Лобби", "home.index");
         this.iconBack = "🔙";
@@ -33,6 +33,7 @@ class Section {
         this.ctx = options.ctx;
         this.bot = options.bot;
         this.app = options.app;
+        this.mainMenuKeyboardArray = this.app.config.mainMenuKeyboard;
         this.route = options.route;
         this.db = global.db;
         this.callbackParams = this.parseParamsCallbackdata();
@@ -193,17 +194,17 @@ class Section {
         });
         return isEquals;
     }
-    useWithPhoto(pathPhoto) {
-        this.pathPhoto = pathPhoto;
-        this.useReplyWithPhoto = true;
-    }
-    setMainMenuKeyboard(data) {
-        this.mainMenuKeyboardArray = data;
-        console.log("mainMenu", this.mainMenuKeyboardArray);
-        return this;
-    }
-    mainMenuKeyboard() {
-        return telegraf_1.Markup.keyboard(this.mainMenuKeyboardArray);
+    async setupKeyboard() {
+        if (this.ctx.userSession.setupKeyboardDone)
+            return;
+        await this.newMessage("Welcome!")
+            .keyboard({
+            keyboard: this.mainMenuKeyboardArray,
+            resize_keyboard: true,
+            one_time_keyboard: true,
+        })
+            .send();
+        this.ctx.userSession.setupKeyboardDone = true;
     }
     async getSetting(name) {
         try {
@@ -279,13 +280,24 @@ class Section {
         if (this.route.runIsCallbackQuery) {
             return this.updateMessage(message);
         }
-        return Message2Byte_1.default.init(this.ctx).message(message);
+        return Message2Byte_1.default.init(this.ctx, this).message(message);
     }
     newMessage(message) {
-        return Message2Byte_1.default.init(this.ctx).message(message);
+        return Message2Byte_1.default.init(this.ctx, this).message(message);
     }
     updateMessage(message) {
-        return Message2Byte_1.default.init(this.ctx).updateMessage(message);
+        return Message2Byte_1.default.init(this.ctx, this).updateMessage(message);
+    }
+    createPoolNewMessage(message) {
+        return Message2Byte_1.default.init(this.ctx, this).createPoolMessage(message);
+    }
+    createUpdatePoolMessage(message) {
+        return Message2Byte_1.default.init(this.ctx, this).createUpdatePoolMessage(message);
+    }
+    createPoolMessage(message) {
+        return this.route.runIsCallbackQuery
+            ? this.createUpdatePoolMessage(message)
+            : this.createPoolNewMessage(message);
     }
     getCtx() {
         return this.ctx;
@@ -296,5 +308,29 @@ class Section {
     getPreviousSection() {
         return this.ctx.userSession.previousSection;
     }
+    async sleepProgressBar(messageWait, ms) {
+        const { promise, resolve, reject } = Promise.withResolvers();
+        const pgIcons = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"];
+        let pgIndex = 0;
+        message += `[pg]${pgIcons[pgIndex]} ${message}`;
+        const pgIntervalTimer = setInterval(() => {
+            // Update progress message here
+            message = message.replace(/\[pg\].*/, `[pg]${pgIcons[pgIndex]} ${messageWait}`);
+            pgIndex = (pgIndex + 1) % pgIcons.length;
+            this.message(message)
+                .send()
+                .catch((err) => {
+                clearInterval(pgIntervalTimer);
+                reject(err);
+            });
+        }, 1000);
+        setTimeout(() => {
+            message = message.replace(/\[pg\].*/, ``);
+            clearInterval(pgIntervalTimer);
+            resolve();
+        }, ms);
+        return promise;
+    }
+    ;
 }
 exports.Section = Section;

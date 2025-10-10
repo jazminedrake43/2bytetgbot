@@ -1,5 +1,6 @@
 import type { Section, Telegraf2byteContext } from "@2byte/tgbot-framework";
 import Message2byte from "./Message2Byte";
+import Message2ByteLiveProgressive from "./Message2ByteLiveProgressive";
 
 export default class Message2bytePool {
     private message2byte: Message2byte;
@@ -45,6 +46,10 @@ export default class Message2bytePool {
         return this;
     }
 
+    liveProgressive(): Message2ByteLiveProgressive {
+        return Message2ByteLiveProgressive.init(this.message2byte, this);
+    }
+
     async send() {
 
         const entity = await this.message2byte.send();
@@ -60,5 +65,33 @@ export default class Message2bytePool {
     async sendReturnThis(): Promise<this> {
         await this.send();
         return this;
+    }
+
+    async sleepProgressBar(messageWait: string, ms: number): Promise<void> {
+      return new Promise<void>((resolve, reject) => {
+        const pgIcons = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"];
+  
+        let pgIndex = 0;
+        let currentMessage = this.messageValue + `[pg]${pgIcons[pgIndex]} ${messageWait}`;
+  
+        const pgIntervalTimer = setInterval(() => {
+          // Update progress message here
+          currentMessage = this.messageValue + `[pg]${pgIcons[pgIndex]} ${messageWait}`;
+          pgIndex = (pgIndex + 1) % pgIcons.length;
+  
+          this.message(currentMessage)
+            .send()
+            .catch((err) => {
+              clearInterval(pgIntervalTimer);
+              reject(err);
+            });
+        }, 1000);
+        
+        setTimeout(() => {
+          clearInterval(pgIntervalTimer);
+          this.message(this.messageValue);
+          resolve();
+        }, ms);
+      });
     }
 }

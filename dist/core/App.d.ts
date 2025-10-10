@@ -3,7 +3,7 @@ import { Section } from "../illumination/Section";
 import { RunSectionRoute } from "../illumination/RunSectionRoute";
 import { UserModel } from "../user/UserModel";
 import { UserStore } from "../user/UserStore";
-import { EnvVars, RunnedSection, SectionList, UserRegistrationData } from "../types";
+import { AppConfig, EnvVars, RunnedSection, SectionList, UserRegistrationData } from "../types";
 export declare class App {
     private config;
     private bot;
@@ -131,5 +131,5 @@ export declare class App {
     private getTgId;
     debugLog(...args: any[]): void;
     get sections(): SectionList;
-    get components(): Record<string, string>;
+    get config(): AppConfig;
 }

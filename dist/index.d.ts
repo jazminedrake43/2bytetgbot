@@ -9,7 +9,7 @@ export { InlineKeyboard } from './illumination/InlineKeyboard';
 export { default as Message2Byte } from './illumination/Message2Byte';
 export { RunSectionRoute } from './illumination/RunSectionRoute';
 export { SectionComponent } from './illumination/SectionComponent';
-export { Telegraf2byteContext } from './illumination/Telegraf2byteContext';
+export type { Telegraf2byteContext } from './illumination/Telegraf2byteContext';
 export { setupMigrations } from './console/migrate';
 export * from './types';
 export { CreateBotCommand } from './cli/CreateBotCommand';
