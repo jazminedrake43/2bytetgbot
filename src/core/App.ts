@@ -737,7 +737,11 @@ export class App {
       this.debugLog(`[Up finish] Section ${sectionId} up for user ${ctx.user.username}`);
     }
 
-    await (sectionInstance as any)[method]();
+    try {
+      await (sectionInstance as any)[method]();
+    } catch (error) {
+      this.debugLog(`[Error] Section ${sectionId} error for user ${ctx.user.username}:`, error);
+    }
 
     // Run down method if section is installed
     const previousSection = (ctx.userSession.previousSection = runnedSection as RunnedSection);

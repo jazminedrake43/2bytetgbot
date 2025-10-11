@@ -49,6 +49,23 @@ export class CreateBotCommand {
       await this.installDependencies(targetPath);
     }
 
+    // Setup database if requested
+    if (config.useDatabase) {
+      console.log(chalk.blue('🗄️  Setting up database...'));
+
+      fs.createFileSync(path.join(targetPath, 'database', 'database.sqlite'));
+
+      console.log(chalk.green('✅ Database setup complete!'));
+    }
+
+    // Rename .env.example to .env
+    await fs.rename(
+      path.join(targetPath, '.env.example'),
+      path.join(targetPath, '.env')
+    );
+
+    console.log(chalk.green('✅ .env file created! Please update it with your bot token and settings.'));
+
     console.log(chalk.green(`✅ Bot ${botName} created successfully!`));
     console.log(chalk.blue('📋 Next steps:'));
     console.log(`   cd ${botName}`);
@@ -75,7 +92,7 @@ export class CreateBotCommand {
       {
         type: 'confirm',
         name: 'useDatabase',
-        message: 'Include database setup?',
+        message: 'Include sqlite 3 database setup?',
         default: !options.noDatabase,
       },
       {

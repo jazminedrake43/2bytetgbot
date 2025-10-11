@@ -1,4 +1,4 @@
-import { BotSeeder } from '2bytetgbot';
+import { BotSeeder } from '@2byte/tgbot-framework';
 import path from 'path';
 
 // Импортируйте здесь ваши сидеры

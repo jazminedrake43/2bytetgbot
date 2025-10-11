@@ -1,4 +1,4 @@
-import { BotMigration } from '2bytetgbot';
+import { BotMigration } from '@2byte/tgbot-framework';
 import path from 'path';
 
 const migration = new BotMigration({
