@@ -1,7 +1,7 @@
 import { Section, SectionOptions, InlineKeyboard } from "@2byte/tgbot-framework";
 
 export default class HomeSection extends Section {
-  static command = "home";
+  static command = "start";
   static description = "{{className}} Bot Home section";
   static actionRoutes = {
     "home.index": "index",
@@ -35,6 +35,7 @@ export default class HomeSection extends Section {
     `;
 
     await this.message(message)
+      .markdown()
       .inlineKeyboard(this.mainInlineKeyboard)
       .send();
   }
@@ -55,6 +56,7 @@ export default class HomeSection extends Section {
     `;
 
     await this.message(message)
+      .markdown()
       .inlineKeyboard([
         [this.makeInlineButton("🏠 На главную", "home.index")],
       ])

@@ -3,6 +3,7 @@ import { UserStore } from "@2byte/tgbot-framework";
 import { sectionList } from "./sectionList";
 import { Database } from 'bun:sqlite';
 import { EnvVars } from "@2byte/tgbot-framework";
+import { UserModel } from '@2byte/tgbot-framework';
 
 if (import.meta.dirname === undefined) {
   throw new Error("import.meta.dirname is not defined. Ensure you are using a module environment.");
@@ -14,6 +15,8 @@ const requiredEnvVars: (keyof EnvVars)[] = [
   "BOT_API_URL",
   "BOT_HOOK_DOMAIN",
   "BOT_HOOK_PORT",
+  "BOT_ACCESS",
+  "ACCESS_USERNAMES"
 ];
 for (const envVar of requiredEnvVars) {
   if (!process.env[envVar]) {
@@ -36,6 +39,8 @@ global.settings = {
   }
 };
 
+UserModel.setDatabase(global.db);
+
 // Autoclean storage user by timeout
 userStorage.autocleanup(10);
 
@@ -53,6 +58,7 @@ const appController = new App.Builder()
     //   secretToken: process.env.BOT_HOOK_SECRET_TOKEN,
     // },
   })
+  .accessPublic(process.env.BOT_ACCESS === "public")
   .apiUrl(process.env.BOT_API_URL as string)
   .settings(settings)
   .userStorage(userStorage)

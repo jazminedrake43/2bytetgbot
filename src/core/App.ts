@@ -18,6 +18,7 @@ import { nameToCapitalize } from "./utils";
 
 export class App {
   private config: AppConfig = {
+    accessPublic: true,
     apiUrl: null,
     envConfig: {},
     botToken: null,
@@ -73,6 +74,16 @@ export class App {
 
     constructor() {
       this.app = new App();
+    }
+
+    accessPublic(isPublic: boolean = true): this {
+      this.app.config.accessPublic = isPublic;
+      return this;
+    }
+
+    accessPrivate(isPrivate: boolean = true): this {
+      this.app.config.accessPublic = !isPrivate;
+      return this;
     }
 
     apiUrl(url: string): this {
@@ -232,15 +243,29 @@ export class App {
       }
 
       if (!this.config.userStorage.exists(tgUsername)) {
-        const userData = await this.registerUser({
-          tgUsername,
-          tgName: this.getTgName(ctx),
-          tgId: this.getTgId(ctx),
-        });
+        if (!this.config.accessPublic) {
+          const requestUsername = this.getTgUsername(ctx);
 
-        if (!userData) {
-          throw new Error("User registration failed");
+          if (this.config.envConfig.ACCESS_USERNAMES && !this.config.envConfig.ACCESS_USERNAMES.split(",").every(name => name !== requestUsername)) {
+            return ctx.reply("Access denied. Your username is not in the access list.");
+          }
         }
+
+        if (!ctx.from) {
+          return ctx.reply("User information is not available");
+        }
+
+        const userRefIdFromStart = ctx.startPayload ? parseInt(ctx.startPayload) : 0;
+
+        await this.registerUser({
+          user_refid: userRefIdFromStart,
+          tg_id: ctx.from.id,
+          tg_username: tgUsername,
+          tg_first_name: ctx.from.first_name || tgUsername,
+          tg_last_name: ctx.from.last_name || "",
+          role: 'user',
+          language: ctx.from.language_code || "en",
+        })
       }
 
       ctx.user = this.config.userStorage.find(tgUsername);
@@ -785,7 +810,7 @@ export class App {
       const user = await UserModel.register(data);
 
       if (this.config.userStorage) {
-        this.config.userStorage.add(data.tgUsername, user);
+        this.config.userStorage.add(data.tg_username, user);
       }
 
       return user;
@@ -1010,7 +1035,7 @@ export class App {
     return this.config.sections;
   }
 
-  get config(): AppConfig {
+  get configApp(): AppConfig {
     return this.config;
   }
 }

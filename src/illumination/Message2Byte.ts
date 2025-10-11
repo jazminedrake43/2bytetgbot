@@ -80,7 +80,7 @@ export default class Message2byte {
     return this;
   }
 
-  inlineKeyboard(keyboard: [][] | InlineKeyboard) {
+  inlineKeyboard(keyboard: any[][] | InlineKeyboard) {
     let keyboardArray: any[][];
 
     if (keyboard instanceof InlineKeyboard) {

@@ -5,6 +5,7 @@ import { Telegraf2byteContext } from './illumination/Telegraf2byteContext';
 import { RunSectionRoute } from './illumination/RunSectionRoute';
 
 export interface AppConfig {
+  accessPublic: boolean;
   apiUrl: string | null;
   envConfig: EnvVars;
   botToken: string | null;
@@ -38,9 +39,18 @@ export interface RunnedSection {
 
 export interface UserAttributes {
   id?: number;
+  user_refid?: number;
   tg_id: number;
   tg_username: string;
-  tg_name: string;
+  tg_first_name: string;
+  tg_last_name?: string;
+  role: 'user' | 'admin';
+  is_banned_by_user?: boolean;
+  is_banned_by_admin?: boolean;
+  bunned_reason?: string;
+  language: string;
+  updated_at: string;
+  created_at: string; 
   [key: string]: any;
 }
 
@@ -89,10 +99,13 @@ export interface UserSession {
 }
 
 export interface UserRegistrationData {
-  tgUsername: string;
-  tgName: string;
-  tgId: number;
-  userRefid?: number;
+  user_refid?: number;
+  tg_id: number;
+  tg_username: string;
+  tg_first_name: string;
+  tg_last_name?: string;
+  role: 'user' | 'admin';
+  language: string;
 }
 
 export interface ComponentOptions {
@@ -141,6 +154,8 @@ export interface EnvVars {
   BOT_HOOK_PORT?: string;
   BOT_HOOK_SECRET_TOKEN?: string;
   BOT_DEV_HOT_RELOAD_SECTIONS?: string;
+  BOT_ACCESS?: 'private' | 'public';
+  ACCESS_USERNAMES?: string; // comma separated usernames
   [key: string]: string | undefined;
 }
 
