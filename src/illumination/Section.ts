@@ -355,7 +355,7 @@ export class Section {
     return params;
   }
 
-  makeInlineKeyboard(buttons: any[][]): InlineKeyboard {
+  makeInlineKeyboard(buttons: any[][] = []): InlineKeyboard {
     const keyboard = InlineKeyboard.init(this.ctx, this);
     buttons.forEach((row) => {
       keyboard.append(row);

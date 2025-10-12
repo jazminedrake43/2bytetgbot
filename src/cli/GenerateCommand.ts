@@ -58,9 +58,9 @@ export class GenerateCommand {
   }
 
   private getSectionTemplate(name: string): string {
-    return `import { Section } from "2bytetgbot";
-import { SectionOptions } from "2bytetgbot";
-import { InlineKeyboard } from "2bytetgbot";
+    return `import { Section } from "@2byte/tgbot-framework";
+import { SectionOptions } from "@2byte/tgbot-framework";
+import { InlineKeyboard } from "@2byte/tgbot-framework";
 
 export default class ${name}Section extends Section {
   static command = "${name.toLowerCase()}";
@@ -75,9 +75,7 @@ export default class ${name}Section extends Section {
   constructor(options: SectionOptions) {
     super(options);
 
-    this.mainInlineKeyboard = this.makeInlineKeyboard([
-      [this.makeInlineButton("🏠 На главную", "home.index")],
-    ]);
+    this.mainInlineKeyboard = this.makeInlineKeyboard().addFootFixedButtons(this.btnHome);
   }
 
   public async up(): Promise<void> {}

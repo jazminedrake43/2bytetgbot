@@ -1,4 +1,4 @@
-import { SectionEnabledList, SectionList } from "2bytetgbot";
+import { SectionEnabledList, SectionList } from "@2byte/tgbot-framework";
 
 export const sectionList: SectionList = {
     home: {},   

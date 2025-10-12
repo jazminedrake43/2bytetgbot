@@ -22,7 +22,7 @@ export class InlineKeyboard {
     return this;
   }
 
-  append(row: any[] | any[][]): InlineKeyboard {
+  append(row: any[] | any[][] | any): InlineKeyboard {
     if (!Array.isArray(row)) {
       this.keyboard.push([row]);
     } else if (Array.isArray(row[0])) {
@@ -51,6 +51,7 @@ export class InlineKeyboard {
       keyboard.push(...this.footFixedButtons);
     }
     
+    this.keyboard = [];
     return keyboard;
   }
 

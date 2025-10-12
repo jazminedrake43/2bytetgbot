@@ -1,6 +1,10 @@
 import { Telegraf, Markup } from "telegraf";
 import path from "node:path";
-import { Telegraf2byteContext, Telegraf2byteContextExtraMethods } from "../illumination/Telegraf2byteContext";
+import { access } from "fs/promises";
+import {
+  Telegraf2byteContext,
+  Telegraf2byteContextExtraMethods,
+} from "../illumination/Telegraf2byteContext";
 import { Section } from "../illumination/Section";
 import { RunSectionRoute } from "../illumination/RunSectionRoute";
 import { UserModel } from "../user/UserModel";
@@ -58,10 +62,10 @@ export class App {
       controller?: {
         signal: AbortSignal;
         sendMessage: (message: string) => Promise<void>;
-        onMessage: (handler: (message: string, source: 'task' | 'external') => void) => void;
+        onMessage: (handler: (message: string, source: "task" | "external") => void) => void;
         receiveMessage: (message: string) => Promise<void>;
       };
-      messageQueue?: Array<{ message: string; source: 'task' | 'external' }>;
+      messageQueue?: Array<{ message: string; source: "task" | "external" }>;
     }
   > = new Map();
 
@@ -246,8 +250,10 @@ export class App {
         if (!this.config.accessPublic) {
           const requestUsername = this.getTgUsername(ctx);
           this.debugLog("Private access mode. Checking username:", requestUsername);
-          const checkAccess = this.config.envConfig.ACCESS_USERNAMES && this.config.envConfig.ACCESS_USERNAMES.split(",").map(name => name.trim());
-          if (checkAccess && checkAccess.every(name => name !== requestUsername)) {
+          const checkAccess =
+            this.config.envConfig.ACCESS_USERNAMES &&
+            this.config.envConfig.ACCESS_USERNAMES.split(",").map((name) => name.trim());
+          if (checkAccess && checkAccess.every((name) => name !== requestUsername)) {
             return ctx.reply("Access denied. Your username is not in the access list.");
           }
         }
@@ -264,9 +270,9 @@ export class App {
           tg_username: tgUsername,
           tg_first_name: ctx.from.first_name || tgUsername,
           tg_last_name: ctx.from.last_name || "",
-          role: 'user',
+          role: "user",
           language: ctx.from.language_code || "en",
-        })
+        });
       }
 
       ctx.user = this.config.userStorage.find(tgUsername);
@@ -312,7 +318,7 @@ export class App {
         const sectionId = actionPathParts[0];
 
         let sectionClass = this.sectionClasses.get(sectionId);
-        
+
         if (!sectionClass) {
           throw new Error(`Section class not found for sectionId ${sectionId}`);
         }
@@ -320,7 +326,7 @@ export class App {
         const method = sectionClass.actionRoutes[actionPath];
 
         if (!method) {
-          throw new Error(`Method ${actionPath} not found in section ${sectionId}`);
+          throw new Error(`Action ${actionPath} method ${method} not found in section ${sectionId}`);
         }
 
         const sectionRoute = new RunSectionRoute()
@@ -339,10 +345,9 @@ export class App {
     // Register hears
     Object.entries(this.config.hears).forEach(([key, sectionMethod]) => {
       this.bot.hears(key, async (ctx: Telegraf2byteContext) => {
-        
         const [sectionId, method] = sectionMethod.split(".");
         const sectionRoute = new RunSectionRoute().section(sectionId).method(method).hearsKey(key);
-        
+
         this.debugLog(`Hears matched: ${key}, running section ${sectionId}, method ${method}`);
 
         this.runSection(ctx, sectionRoute).catch((err) => {
@@ -417,6 +422,7 @@ export class App {
           delete ctx.userSession.awaitingInputPromise;
           // Разрешаем Promise
           resolve(inputValue);
+          ctx.deleteLastMessage();
         } else {
           // Увеличиваем счетчик попыток
           awaitingPromise.retryCount = retryCount + 1;
@@ -628,13 +634,20 @@ export class App {
     let pathSectionModule =
       sectionParams.pathModule ??
       path.join(process.cwd(), "./sections/" + nameToCapitalize(sectionId) + "Section");
- 
-    this.debugLog('Path to section module: ', pathSectionModule);
-    
+
+    this.debugLog("Path to section module: ", pathSectionModule);
+
+    // Check if file exists
+    try {
+      await access(pathSectionModule + ".ts");
+    } catch {
+      throw new Error(`Section ${sectionId} not found at path ${pathSectionModule}.ts`);
+    }
+
     if (freshVersion) {
       pathSectionModule += "?update=" + Date.now();
     }
-    
+
     const sectionClass = (await import(pathSectionModule)).default;
 
     this.debugLog("Loaded section", sectionId);
@@ -650,8 +663,10 @@ export class App {
       try {
         this.sectionClasses.set(sectionId, await this.loadSection(sectionId));
       } catch (err) {
-        this.debugLog('Error stack:', err instanceof Error ? err.stack : 'No stack available');
-        throw new Error(`Failed to load section ${sectionId}: ${err instanceof Error ? err.message : err}`);
+        this.debugLog("Error stack:", err instanceof Error ? err.stack : "No stack available");
+        throw new Error(
+          `Failed to load section ${sectionId}: ${err instanceof Error ? err.message : err}`
+        );
       }
     }
   }
@@ -752,7 +767,9 @@ export class App {
       if (sectionInstalled) {
         this.debugLog(`[Setup] Section ${sectionId} install for user ${ctx.user.username}`);
         await sectionInstance.setup();
-        this.debugLog(`[Setup finish] Section ${sectionId} installed for user ${ctx.user.username}`);
+        this.debugLog(
+          `[Setup finish] Section ${sectionId} installed for user ${ctx.user.username}`
+        );
       }
     }
 
@@ -833,7 +850,7 @@ export class App {
     task: (controller: {
       signal: AbortSignal;
       sendMessage: (message: string) => Promise<void>;
-      onMessage: (handler: (message: string, source: 'task' | 'external') => void) => void;
+      onMessage: (handler: (message: string, source: "task" | "external") => void) => void;
     }) => Promise<any>,
     options: {
       taskId?: string;
@@ -859,8 +876,8 @@ export class App {
     const abortController = new AbortController();
 
     // Message handling setup
-    const messageHandlers: ((message: string, source: 'task' | 'external') => void)[] = [];
-    const messageQueue: Array<{ message: string; source: 'task' | 'external' }> = [];
+    const messageHandlers: ((message: string, source: "task" | "external") => void)[] = [];
+    const messageQueue: Array<{ message: string; source: "task" | "external" }> = [];
 
     // Create task controller interface
     const taskController = {
@@ -870,23 +887,25 @@ export class App {
         if (!silent) {
           await ctx.reply(`[Задача ${taskId}]: ${message}`).catch(console.error);
         }
-        messageQueue.push({ message, source: 'task' });
-        messageHandlers.forEach(handler => handler(message, 'task'));
+        messageQueue.push({ message, source: "task" });
+        messageHandlers.forEach((handler) => handler(message, "task"));
       },
       // Handle incoming messages to task
-      onMessage: (handler: (message: string, source: 'task' | 'external') => void) => {
+      onMessage: (handler: (message: string, source: "task" | "external") => void) => {
         messageHandlers.push(handler);
         // Process any queued messages
         messageQueue.forEach(({ message, source }) => handler(message, source));
       },
       // Receive message from external source
       receiveMessage: async (message: string) => {
-        messageQueue.push({ message, source: 'external' });
-        messageHandlers.forEach(handler => handler(message, 'external'));
+        messageQueue.push({ message, source: "external" });
+        messageHandlers.forEach((handler) => handler(message, "external"));
         if (!silent) {
-          await ctx.reply(`[Внешнее сообщение для задачи ${taskId}]: ${message}`).catch(console.error);
+          await ctx
+            .reply(`[Внешнее сообщение для задачи ${taskId}]: ${message}`)
+            .catch(console.error);
         }
-      }
+      },
     };
 
     // Send start notification if enabled
@@ -907,7 +926,7 @@ export class App {
       startTime: Date.now(),
       ctx,
       controller: taskController,
-      messageQueue
+      messageQueue,
     });
 
     // Handle task completion and errors

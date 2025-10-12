@@ -7,16 +7,14 @@ export default class HomeSection extends Section {
     "home.index": "index",
     "home.help": "help",
   };
-  
+
   public sectionId = "home";
   private mainInlineKeyboard: InlineKeyboard;
 
   constructor(options: SectionOptions) {
     super(options);
 
-    this.mainInlineKeyboard = this.makeInlineKeyboard([
-      [this.makeInlineButton("ℹ️ Помощь", "home.help")],
-    ]).addFootFixedButtons(this.btnHome);
+    this.mainInlineKeyboard = this.makeInlineKeyboard().addFootFixedButtons(this.btnHome);
   }
 
   public async up(): Promise<void> {}
@@ -36,7 +34,11 @@ export default class HomeSection extends Section {
 
     await this.message(message)
       .markdown()
-      .inlineKeyboard(this.mainInlineKeyboard)
+      .inlineKeyboard(
+        this.mainInlineKeyboard
+          .append(this.makeInlineButton("ℹ️ Помощь", "home.help"))
+          .append(this.makeInlineButton("➕ Example Input", "exampleInput.index"))
+      )
       .send();
   }
 
@@ -55,9 +57,6 @@ export default class HomeSection extends Section {
 • bun run seed - Заполнить данными
     `;
 
-    await this.message(message)
-      .inlineKeyboard(this.mainInlineKeyboard)
-      .markdown()
-      .send();
+    await this.message(message).inlineKeyboard(this.mainInlineKeyboard).markdown().send();
   }
 }
