@@ -191,6 +191,7 @@ export default class Message2byte {
   }
 
   async send() {
+    // console.log("Sending message:", this.messageValue, ' Extra:', this.messageExtra, 'IsUpdate:', this.isUpdate);
     if (this.isUpdate) {
       if (this.section.route.runIsCallbackQuery && this.doAnswerCbQuery) {
         await this.ctx.answerCbQuery();
@@ -225,7 +226,7 @@ export default class Message2byte {
         if (typeof messageEntity === "object" && 'message_id' in messageEntity) {
           this.messageId = messageEntity.message_id as number;
         }
-
+        
         return messageEntity;
       }
     }

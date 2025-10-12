@@ -38,6 +38,7 @@ export default class HomeSection extends Section {
         this.mainInlineKeyboard
           .append(this.makeInlineButton("ℹ️ Помощь", "home.help"))
           .append(this.makeInlineButton("➕ Example Input", "exampleInput.index"))
+          .append(this.makeInlineButton("🚀 Example Live Tasker", "exampleLiveTasker.index"))
       )
       .send();
   }

@@ -54,7 +54,7 @@ export class GenerateCommand {
   }
 
   private formatSectionName(name: string): string {
-    return name.charAt(0).toUpperCase() + name.slice(1).toLowerCase();
+    return name.charAt(0).toUpperCase() + name.slice(1);
   }
 
   private getSectionTemplate(name: string): string {
@@ -66,10 +66,10 @@ export default class ${name}Section extends Section {
   static command = "${name.toLowerCase()}";
   static description = "${name} section";
   static actionRoutes = {
-    "${name.toLowerCase()}.index": "index",
+    "${name}.index": "index",
   };
   
-  public sectionId = "${name.toLowerCase()}";
+  public sectionId = "${name}";
   private mainInlineKeyboard: InlineKeyboard;
 
   constructor(options: SectionOptions) {

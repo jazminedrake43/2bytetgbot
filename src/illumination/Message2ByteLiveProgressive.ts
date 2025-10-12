@@ -148,7 +148,7 @@ export default class Message2ByteLiveProgressive {
   /**
    * Останавливает прогрессбар
    */
-  stopSleepProgress(): this {
+  async stopSleepProgress(): Promise<this> {
     if (this.progressBarTimer) {
       clearInterval(this.progressBarTimer);
       this.progressBarTimer = undefined;
@@ -162,7 +162,7 @@ export default class Message2ByteLiveProgressive {
       }
       this.activeProgressItem = undefined;
       this.updateMessage();
-      this.message2bytePool.send();
+      await this.message2bytePool.send();
     }
 
     return this;
