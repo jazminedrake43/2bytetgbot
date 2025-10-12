@@ -2,7 +2,7 @@ import { Section, SectionOptions, InlineKeyboard } from "@2byte/tgbot-framework"
 
 export default class HomeSection extends Section {
   static command = "start";
-  static description = "{{className}} Bot Home section";
+  static description = "Example Bot Home section";
   static actionRoutes = {
     "home.index": "index",
     "home.help": "help",
@@ -16,7 +16,7 @@ export default class HomeSection extends Section {
 
     this.mainInlineKeyboard = this.makeInlineKeyboard([
       [this.makeInlineButton("ℹ️ Помощь", "home.help")],
-    ]);
+    ]).addFootFixedButtons(this.btnHome);
   }
 
   public async up(): Promise<void> {}
@@ -26,9 +26,9 @@ export default class HomeSection extends Section {
 
   async index() {
     const message = `
-🏠 **{{className}} Bot**
+🏠 **Example Bot**
 
-Добро пожаловать в {{className}} бот!
+Добро пожаловать в Example бот!
 Это стартовая секция, созданная с помощью 2byte framework.
 
 Выберите действие:
@@ -56,10 +56,8 @@ export default class HomeSection extends Section {
     `;
 
     await this.message(message)
+      .inlineKeyboard(this.mainInlineKeyboard)
       .markdown()
-      .inlineKeyboard([
-        [this.makeInlineButton("🏠 На главную", "home.index")],
-      ])
       .send();
   }
 }
