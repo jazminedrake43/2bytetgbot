@@ -245,8 +245,9 @@ export class App {
       if (!this.config.userStorage.exists(tgUsername)) {
         if (!this.config.accessPublic) {
           const requestUsername = this.getTgUsername(ctx);
-
-          if (this.config.envConfig.ACCESS_USERNAMES && !this.config.envConfig.ACCESS_USERNAMES.split(",").every(name => name !== requestUsername)) {
+          this.debugLog("Private access mode. Checking username:", requestUsername);
+          const checkAccess = this.config.envConfig.ACCESS_USERNAMES && this.config.envConfig.ACCESS_USERNAMES.split(",").map(name => name.trim());
+          if (checkAccess && checkAccess.every(name => name !== requestUsername)) {
             return ctx.reply("Access denied. Your username is not in the access list.");
           }
         }

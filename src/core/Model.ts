@@ -10,6 +10,15 @@ export abstract class Model {
     this.db = database;
   }
 
+  protected static resolveDb(): Database {
+    if (globalThis.db) {
+      this.db = globalThis.db;
+    } else {
+      throw new Error("Database connection is not set.");
+    }
+    return this.db;
+  }
+
   protected static query(sql: string, params: any[] = []): any {
     const stmt = this.db.prepare(sql);
     return stmt.all(...params);

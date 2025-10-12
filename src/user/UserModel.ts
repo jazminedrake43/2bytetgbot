@@ -83,7 +83,8 @@ export class UserModel extends Model {
     // });
     
     // return UserModel.make(resApi.data);
-
+    this.resolveDb();
+    
     if (this.db && !this.exists('WHERE tg_id = ?', [params.tg_id])) {
       const result = this.run(
         `INSERT INTO ${this.tableName} (tg_id, tg_username, tg_first_name, tg_last_name, user_refid, role, language) 
@@ -123,7 +124,7 @@ export class UserModel extends Model {
       return user;
     }
 
-    throw new Error("Error registering user");
+    throw new Error("Error not found user params:" + JSON.stringify(params));
   }
 
   static findByUsername(tgUsername: string): UserModel | undefined {
@@ -133,6 +134,8 @@ export class UserModel extends Model {
       if (userData) {
         return UserModel.make(userData);
       }
+    } else {
+      throw new Error("Database connection is not set.");
     }
 
     return undefined;
