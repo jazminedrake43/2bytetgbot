@@ -32,6 +32,13 @@ export class Section {
   protected iconRefresh: string = "🔃";
   protected iconHistory: string = "🗂";
   protected iconEuro: string = "💶";
+  protected iconDollar: string = "💵";
+  protected iconRuble: string = "₽";
+  protected iconPencil: string = "🖉";
+  protected iconInfo: string = "ℹ️";
+  protected iconWarning: string = "⚠️";
+  protected iconQuestion: string = "❓";
+  protected iconSuccess: string = "✅";
   protected iconRejected: string = "❌";
   protected labelBack: string = `${this.iconBack} Назад`;
 
@@ -400,31 +407,4 @@ export class Section {
   getPreviousSection(): RunnedSection | undefined {
     return this.ctx.userSession.previousSection;
   }
-
-  async sleepProgressBar(messageWait: string, ms: number): Promise<void> {
-      const { promise, resolve, reject } = Promise.withResolvers<void>();
-      const pgIcons = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"];
-
-      let pgIndex = 0;
-      message += `[pg]${pgIcons[pgIndex]} ${message}`;
-
-      const pgIntervalTimer = setInterval(() => {
-        // Update progress message here
-        message = message.replace(/\[pg\].*/, `[pg]${pgIcons[pgIndex]} ${messageWait}`);
-        pgIndex = (pgIndex + 1) % pgIcons.length;
-
-        this.message(message)
-          .send()
-          .catch((err) => {
-            clearInterval(pgIntervalTimer);
-            reject(err);
-          });
-      }, 1000);
-      setTimeout(() => {
-        message = message.replace(/\[pg\].*/, ``);
-        clearInterval(pgIntervalTimer);
-        resolve();
-      }, ms);
-      return promise;
-    };
 }
