@@ -51,7 +51,7 @@ export class Section {
     this.ctx = options.ctx;
     this.bot = options.bot;
     this.app = options.app;
-    this.mainMenuKeyboardArray = this.app.config.mainMenuKeyboard;
+    this.mainMenuKeyboardArray = this.app.configApp.mainMenuKeyboard;
     this.route = options.route;
     this.db = (global as any).db as Database;
     this.callbackParams = this.parseParamsCallbackdata();
