@@ -2,6 +2,10 @@ import type { Database } from "bun:sqlite";
 import { MakeManualPaginateButtonsParams, ModelPaginateParams, PaginateResult } from "../types";
 import { Section } from "../illumination/Section";
 
+declare global {
+  var db: Database;
+}
+
 export abstract class Model {
   protected static db: Database;
   protected static tableName: string;

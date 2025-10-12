@@ -3,7 +3,6 @@ import { UserStore } from "@2byte/tgbot-framework";
 import { sectionList } from "./sectionList";
 import { Database } from 'bun:sqlite';
 import { EnvVars } from "@2byte/tgbot-framework";
-import { UserModel } from '@2byte/tgbot-framework';
 
 if (import.meta.dirname === undefined) {
   throw new Error("import.meta.dirname is not defined. Ensure you are using a module environment.");
@@ -38,8 +37,6 @@ global.settings = {
     taskListPerPage: 3, // Number items per page
   }
 };
-
-UserModel.setDatabase(global.db);
 
 // Autoclean storage user by timeout
 userStorage.autocleanup(10);

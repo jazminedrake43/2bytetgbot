@@ -1,6 +1,6 @@
 {
   "name": "@2byte/tgbot-framework",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "A TypeScript framework for creating Telegram bots with sections-based architecture (Bun optimized)",
   "main": "src/index.ts",
   "types": "src/index.ts",
