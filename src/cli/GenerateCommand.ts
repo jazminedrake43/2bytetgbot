@@ -27,6 +27,31 @@ export class GenerateCommand {
     console.log(chalk.green(`✅ Created section ${sectionName} at ${sectionPath}`));
   }
 
+  async generateService(name: string): Promise<void> {
+    console.log(chalk.blue(`⚙️  Generating service: ${name}`));
+
+    const currentDir = process.cwd();
+    const servicesDir = path.join(currentDir, 'workflow', 'services');
+    const serviceName = this.formatServiceName(name);
+    const servicePath = path.join(servicesDir, `${serviceName}.ts`);
+
+    // Ensure services directory exists
+    await fs.ensureDir(servicesDir);
+
+    // Check if service already exists
+    if (await fs.pathExists(servicePath)) {
+      console.log(chalk.red(`❌ Service ${serviceName} already exists at ${servicePath}`));
+      return;
+    }
+
+    // Generate service content
+    const template = this.getServiceTemplate(serviceName);
+    await fs.writeFile(servicePath, template);
+
+    console.log(chalk.green(`✅ Created service ${serviceName} at ${servicePath}`));
+    console.log(chalk.yellow(`💡 Service will be automatically loaded from workflow/services directory`));
+  }
+
   async generateMigration(name: string): Promise<void> {
     console.log(chalk.blue(`🗃️  Generating migration: ${name}`));
 
@@ -55,6 +80,12 @@ export class GenerateCommand {
 
   private formatSectionName(name: string): string {
     return name.charAt(0).toUpperCase() + name.slice(1);
+  }
+
+  private formatServiceName(name: string): string {
+    // Convert to PascalCase and add "Service" suffix if not present
+    const pascalName = name.charAt(0).toUpperCase() + name.slice(1);
+    return pascalName.endsWith('Service') ? pascalName : `${pascalName}Service`;
   }
 
   private getSectionTemplate(name: string): string {
@@ -92,6 +123,61 @@ export default class ${name}Section extends Section {
       .inlineKeyboard(this.mainInlineKeyboard)
       .send();
   }
+}
+`;
+  }
+
+  private getServiceTemplate(name: string): string {
+    return `import { App } from "@2byte/tgbot-framework";
+import { ApiService } from "@2byte/tgbot-framework";
+
+export default class ${name} extends ApiService {
+
+    constructor(
+        protected app: App,
+        public name: string = "${name}"
+    ) {
+        super(app, name);
+    }
+
+    /**
+     * Setup method called when service is registered
+     * Use this for initialization tasks like setting up connections,
+     * loading configurations, etc.
+     */
+    public async setup(): Promise<void> {
+        // TODO: Add setup logic here
+        this.app.debugLog(\`[\${this.name}] Service setup completed\`);
+        return Promise.resolve();
+    }
+
+    /**
+     * Cleanup method called when service is being destroyed
+     * Use this for cleanup tasks like closing connections,
+     * releasing resources, etc.
+     */
+    public async unsetup(): Promise<void> {
+        // TODO: Add cleanup logic here
+        this.app.debugLog(\`[\${this.name}] Service cleanup completed\`);
+        return Promise.resolve();
+    }
+
+    /**
+     * Main run method for the service
+     * This is where your service's main logic should be implemented
+     */
+    public async run(): Promise<void> {
+        // TODO: Add your service logic here
+        this.app.debugLog(\`[\${this.name}] Service running\`);
+        return Promise.resolve();
+    }
+
+    /**
+     * Example method - you can add your own methods here
+     */
+    // public async exampleMethod(): Promise<void> {
+    //     // Your custom logic
+    // }
 }
 `;
   }

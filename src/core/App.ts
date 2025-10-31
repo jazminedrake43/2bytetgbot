@@ -19,6 +19,7 @@ import {
   UserRegistrationData,
 } from "../types";
 import { nameToCapitalize } from "./utils";
+import { ApiServiceManager } from "./ApiServiceManager";
 
 export class App {
   private config: AppConfig = {
@@ -40,13 +41,15 @@ export class App {
     terminateSigInt: true,
     terminateSigTerm: true,
     keepSectionInstances: false,
+    botCwd: process.cwd(),
   };
 
-  private bot!: Telegraf<Telegraf2byteContext>;
+  public bot!: Telegraf<Telegraf2byteContext>;
   private sectionClasses: Map<string, typeof Section> = new Map();
   private runnedSections: WeakMap<UserModel, RunnedSection | Map<string, RunnedSection>> =
     new WeakMap();
   private middlewares: CallableFunction[] = [];
+  private apiServiceManager!: ApiServiceManager;
 
   // Система управления фоновыми задачами
   private runningTasks: Map<
@@ -173,6 +176,11 @@ export class App {
       return this;
     }
 
+    botCwd(cwdPath: string): this {
+      this.app.config.botCwd = cwdPath;
+      return this;
+    }
+
     build(): App {
       return this.app;
     }
@@ -201,6 +209,8 @@ export class App {
     this.registerHears();
     this.registerCommands();
     this.registerMessageHandlers();
+    await this.registerServices();
+
 
     return this;
   }
@@ -218,7 +228,7 @@ export class App {
     });
 
     await this.bot.launch(this.config.telegrafConfigLaunch || {});
-
+    
     if (this.config.terminateSigInt) {
       process.once("SIGINT", () => {
         this.bot?.stop("SIGINT");
@@ -326,7 +336,9 @@ export class App {
         const method = sectionClass.actionRoutes[actionPath];
 
         if (!method) {
-          throw new Error(`Action ${actionPath} method ${method} not found in section ${sectionId}`);
+          throw new Error(
+            `Action ${actionPath} method ${method} not found in section ${sectionId}`
+          );
         }
 
         const sectionRoute = new RunSectionRoute()
@@ -384,6 +396,46 @@ export class App {
       const largestPhoto = photo[photo.length - 1];
       await this.handleUserInput(ctx, largestPhoto, "photo");
     });
+  }
+
+  private async registerServices() {
+    this.apiServiceManager = ApiServiceManager.init(this);
+
+    const registerServices = async (pathDirectory: string) => {
+      try {
+        await this.apiServiceManager.loadServicesFromDirectory(
+          pathDirectory
+        );
+      } catch (error) {
+        this.debugLog("Error loading services:", error);
+        throw error;
+      }
+
+      this.debugLog("Registered API services:%s in dir: %s", Array.from(this.apiServiceManager.getAll().keys()), pathDirectory);
+
+      for (const [name, service] of this.apiServiceManager.getAll()) {
+        await service.setup();
+        this.debugLog(`Service ${name} setup completed`);
+        await service.run();
+        this.debugLog(`Service ${name} run completed`);
+      }
+    };
+
+    // Register services from bot directory
+    await registerServices(this.config.botCwd + "/workflow/services");
+    // Register services from framework directory
+    await registerServices(path.resolve(__dirname, "../workflow/services"));
+  }
+
+  private async unregisterServices() {
+    this.apiServiceManager = ApiServiceManager.init(this);
+
+    try {
+      this.apiServiceManager.unsetupAllServices();
+    } catch (error) {
+      this.debugLog("Error unsetting up services:", error);
+      throw error;
+    }
   }
 
   private async handleUserInput(

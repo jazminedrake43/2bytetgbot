@@ -17,6 +17,11 @@ export class UserModel extends Model {
     this.attributes = attributes;
   }
 
+  static getAll(): UserModel[] {
+    const usersData = this.query(`SELECT * FROM ${this.tableName}`);
+    return usersData.map((data: any) => UserModel.make(data));
+  }
+
   setSessionStorage(storage: UserStore): this {
     this.userSession = storage;
     return this;
@@ -189,6 +194,10 @@ export class UserModel extends Model {
 
   get username(): string {
     return this.attributes.tg_username;
+  }
+
+  get tgId(): number {
+    return this.attributes.tg_id;
   }
 
   get firstName(): string {

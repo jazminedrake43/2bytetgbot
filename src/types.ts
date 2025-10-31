@@ -23,6 +23,7 @@ export interface AppConfig {
   terminateSigInt: boolean;
   terminateSigTerm: boolean;
   keepSectionInstances: boolean;
+  botCwd: string;
 }
 
 export interface SectionOptions {
@@ -156,7 +157,8 @@ export interface EnvVars {
   BOT_DEV_HOT_RELOAD_SECTIONS?: string;
   BOT_ACCESS?: 'private' | 'public';
   ACCESS_USERNAMES?: string; // comma separated usernames
-  [key: string]: string | undefined;
+  BOT_APP_API_PORT?: number;
+  [key: string]: string | number |undefined;
 }
 
 export type ModelPaginateParams = {

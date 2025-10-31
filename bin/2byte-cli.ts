@@ -64,6 +64,19 @@ generate
   });
 
 generate
+  .command('service <name>')
+  .description('Generate a new API service')
+  .action(async (name) => {
+    try {
+      const command = new GenerateCommand();
+      await command.generateService(name);
+    } catch (error) {
+      console.error(chalk.red('❌ Error:'), error.message);
+      process.exit(1);
+    }
+  });
+
+generate
   .command('migration <name>')
   .description('Generate a new migration')
   .action(async (name) => {

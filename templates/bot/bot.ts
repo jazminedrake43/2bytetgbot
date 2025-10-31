@@ -15,7 +15,8 @@ const requiredEnvVars: (keyof EnvVars)[] = [
   "BOT_HOOK_DOMAIN",
   "BOT_HOOK_PORT",
   "BOT_ACCESS",
-  "ACCESS_USERNAMES"
+  "ACCESS_USERNAMES",
+  "BOT_APP_API_PORT",
 ];
 for (const envVar of requiredEnvVars) {
   if (!process.env[envVar]) {
@@ -42,6 +43,7 @@ global.settings = {
 userStorage.autocleanup(10);
 
 const appController = new App.Builder()
+  .botCwd(import.meta.dirname)
   .envConfig(process.env as EnvVars)
   .botToken(process.env.BOT_TOKEN as string)
   .telegrafConfigLaunch({

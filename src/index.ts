@@ -1,5 +1,7 @@
 // Core classes
 export { App } from './core/App';
+export { ApiService } from './core/ApiService';
+export { ApiServiceManager } from './core/ApiServiceManager';
 export { BotArtisan } from './core/BotArtisan';
 export { BotMigration } from './core/BotMigration';
 export { BotSeeder } from './core/BotSeeder';
