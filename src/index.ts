@@ -26,10 +26,17 @@ export * from './types';
 export { CreateBotCommand } from './cli/CreateBotCommand';
 export { InitCommand } from './cli/InitCommand';
 export { GenerateCommand } from './cli/GenerateCommand';
+export { manualAdderTgAccount } from './cli/TgAccountManager';
+
+// Model exports
+export * from './models';
 
 // User exports
 export { UserModel } from './user/UserModel';
 export { UserStore } from './user/UserStore';
+
+export * from './libs/TelegramAccountControl';
+export { TgSender } from './libs/TgSender';
 
 // Type exports
 export * from './types';

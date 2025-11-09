@@ -3,11 +3,13 @@ import { StringSession } from "telegram/sessions";
 import fs from "fs";
 import { TelegramClientParams } from "telegram/client/telegramBaseClient";
 import { ProxyInterface } from "telegram/network/connection/TCPMTProxy";
+import type { Database } from "bun:sqlite";
+import { TgAccount, Proxy, TgAccountStatus, ProxyStatus } from '../models';
 
-interface TelegramRegistrarInit {
+interface TelegramAccountRemoteInit {
   appId: string;
   appHash: string;
-  credetialsManager: TelegramManagerCredentials;
+  credetialsManager: TelegramManagerCredentialsDriver;
 }
 
 type TelegramClientProxy = {
@@ -37,6 +39,8 @@ interface TelegramCredentialsManagerInit {
   pathFileProxyList: string;
   pathFileCounterOffset: string;
 }
+
+export type TelegramManagerCredentialsDriver = TelegramManagerCredentials | TelegramManagerCredentialsDB;
 
 export class TelegramManagerCredentials {
   private requiredProxyForCredentials: boolean = false;
@@ -219,7 +223,11 @@ export class TelegramManagerCredentials {
    * Add or update credential
    */
   addCredential(credential: TelegramCredentials): void {
-    
+    // replace +
+    if (credential.phone.includes('+')) {
+      credential.phone = credential.phone.replace('+', '');
+    }
+
     // Attach proxy to credential
     if (this.requiredProxyForCredentials && !credential.proxy) {
       try {
@@ -327,15 +335,15 @@ export class TelegramManagerCredentials {
 }
 
 export class TelegramAccountRemote {
-  private initOptions: TelegramRegistrarInit;
+  private initOptions: TelegramAccountRemoteInit;
   private tgClient!: TelegramClient; // Используем definite assignment assertion
-  private credentialsManager: TelegramManagerCredentials;
+  private credentialsManager: TelegramManagerCredentialsDriver;
 
-  static init(initOptions: TelegramRegistrarInit) {
+  static init(initOptions: TelegramAccountRemoteInit) {
     return new TelegramAccountRemote(initOptions);
   }
 
-  constructor(initOptions: TelegramRegistrarInit) {
+  constructor(initOptions: TelegramAccountRemoteInit) {
     this.initOptions = initOptions;
     this.credentialsManager = initOptions.credetialsManager;
   }
@@ -734,5 +742,399 @@ export class TelegramAccountRemote {
       console.error('Error sending message:', error);
       throw new Error(`Failed to send message to ${target}: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
+  }
+}
+
+/**
+ * Менеджер учетных данных Telegram с поддержкой базы данных SQLite
+ */
+export class TelegramManagerCredentialsDB {
+  private database: Database;
+  private requiredProxyForCredentials: boolean = false;
+
+  // Локальные импорты для избежания конфликтов путей
+  private TgAccount: any;
+  private Proxy: any;
+  private TgAccountStatus: any;
+  private ProxyStatus: any;
+
+  constructor(database: Database) {
+    this.database = database;
+    
+    // Динамический импорт моделей
+    this.initModels();
+  }
+
+  private async initModels() {
+    this.TgAccount = TgAccount;
+    this.Proxy = Proxy;
+    this.TgAccountStatus = TgAccountStatus;
+    this.ProxyStatus = ProxyStatus;
+
+    // Устанавливаем базу данных для моделей
+    this.TgAccount.setDatabase(this.database);
+    this.Proxy.setDatabase(this.database);
+  }
+
+  /**
+   * Включить/выключить обязательное использование прокси для учетных данных
+   */
+  setRequiredProxyForCredentials(required: boolean): void {
+    this.requiredProxyForCredentials = required;
+  }
+
+  /**
+   * Преобразовать данные прокси из БД в формат TelegramClientProxy
+   */
+  private convertProxyToTelegramFormat(proxyData: any): TelegramClientProxy {
+    return {
+      ip: proxyData.ip,
+      port: proxyData.port,
+      username: proxyData.username || undefined,
+      password: proxyData.password || undefined,
+      secret: proxyData.secret || undefined,
+      socksType: (proxyData.socksType === 4 || proxyData.socksType === 5) ? proxyData.socksType as 4 | 5 : 5,
+      MTProxy: proxyData.MTProxy === 1
+    };
+  }
+
+  /**
+   * Получить следующий доступный прокси из БД
+   */
+  private async getNextProxy(): Promise<TelegramClientProxy> {
+    const proxy = await this.Proxy.getRandomActive();
+    if (!proxy) {
+      throw new Error("Нет доступных прокси в базе данных");
+    }
+
+    return this.convertProxyToTelegramFormat(proxy);
+  }
+
+  /**
+   * Добавить или обновить учетные данные
+   */
+  async addCredential(credential: TelegramCredentials): Promise<void> {
+    let proxyId: number | null = null;
+
+    // Назначить прокси если требуется
+    if (this.requiredProxyForCredentials && !credential.proxy) {
+      try {
+        const proxy = await this.getNextProxy();
+        credential.proxy = proxy;
+        
+        // Найти ID прокси в БД
+        const proxyData = await this.Proxy.findByIpPort(proxy.ip, proxy.port);
+        if (proxyData) {
+          proxyId = proxyData.id!;
+        }
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        throw new Error(`Не удалось назначить прокси: ${errorMessage}`);
+      }
+    } else if (credential.proxy) {
+      // Найти существующий прокси или создать новый
+      let proxyData = await this.Proxy.findByIpPort(credential.proxy.ip, credential.proxy.port);
+      if (!proxyData) {
+        // Создать новый прокси в БД
+        proxyId = await this.Proxy.create({
+          ip: credential.proxy.ip,
+          port: credential.proxy.port,
+          username: credential.proxy.username || null,
+          password: credential.proxy.password || null,
+          secret: credential.proxy.secret || null,
+          socksType: credential.proxy.socksType || null,
+          MTProxy: credential.proxy.MTProxy ? 1 : 0,
+          status: this.ProxyStatus.ACTIVE
+        });
+      } else {
+        proxyId = proxyData.id!;
+      }
+    }
+
+    // Используем upsert для вставки или обновления
+    await this.TgAccount.upsert({
+      phone: credential.phone.replace('+', ''),
+      session: credential.session || null,
+      password: credential.password || null,
+      proxy_id: proxyId,
+      status: credential.session ? this.TgAccountStatus.ACTIVE : this.TgAccountStatus.INACTIVE
+    });
+  }
+
+  /**
+   * Получить учетные данные по номеру телефона
+   */
+  async getCredential(phone: string): Promise<TelegramCredentials | null> {
+    const accountData = await this.TgAccount.findWithProxy(phone);
+    if (!accountData) {
+      return null;
+    }
+
+    let proxy: TelegramClientProxy | undefined;
+    if (accountData.proxy_id && accountData.proxy_ip) {
+      proxy = {
+        ip: accountData.proxy_ip,
+        port: accountData.proxy_port,
+        username: accountData.proxy_username || undefined,
+        password: accountData.proxy_password || undefined,
+        secret: accountData.proxy_secret || undefined,
+        socksType: (accountData.proxy_socksType === 4 || accountData.proxy_socksType === 5) ? 
+          accountData.proxy_socksType as 4 | 5 : 5,
+        MTProxy: accountData.proxy_MTProxy === 1
+      };
+    }
+
+    return {
+      phone: accountData.phone,
+      session: accountData.session || undefined,
+      password: accountData.password || undefined,
+      proxy
+    };
+  }
+
+  /**
+   * Удалить учетные данные по номеру телефона
+   */
+  async deleteCredential(phone: string): Promise<boolean> {
+    const account = await this.TgAccount.findByPhone(phone);
+    if (account) {
+      await this.TgAccount.delete(phone);
+      return true;
+    }
+    return false;
+  }
+
+  /**
+   * Получить все учетные данные
+   */
+  async getAllCredentials(): Promise<TelegramCredentials[]> {
+    const accounts = await this.TgAccount.getAllWithProxy();
+    const credentials: TelegramCredentials[] = [];
+
+    for (const account of accounts) {
+      let proxy: TelegramClientProxy | undefined;
+      
+      if (account.proxy_id && account.proxy_ip) {
+        proxy = {
+          ip: account.proxy_ip,
+          port: account.proxy_port,
+          username: account.proxy_username || undefined,
+          password: account.proxy_password || undefined,
+          secret: account.proxy_secret || undefined,
+          socksType: (account.proxy_socksType === 4 || account.proxy_socksType === 5) ? 
+            account.proxy_socksType as 4 | 5 : 5,
+          MTProxy: account.proxy_MTProxy === 1
+        };
+      }
+
+      credentials.push({
+        phone: account.phone,
+        session: account.session || undefined,
+        password: account.password || undefined,
+        proxy
+      });
+    }
+
+    return credentials;
+  }
+
+  /**
+   * Проверить, существуют ли учетные данные
+   */
+  async hasCredential(phone: string): Promise<boolean> {
+    return await this.TgAccount.exists(phone);
+  }
+
+  /**
+   * Обновить сессию для существующего аккаунта
+   */
+  async updateSession(phone: string, session: string): Promise<boolean> {
+    const account = await this.TgAccount.findByPhone(phone);
+    if (account) {
+      await this.TgAccount.updateSession(phone, session);
+      await this.TgAccount.updateStatus(phone, this.TgAccountStatus.ACTIVE);
+      return true;
+    }
+    return false;
+  }
+
+  /**
+   * Получить количество учетных данных
+   */
+  async getCredentialsCount(): Promise<number> {
+    const stats = await this.TgAccount.getStats();
+    return stats.total;
+  }
+
+  /**
+   * Очистить все учетные данные
+   */
+  async clearAllCredentials(): Promise<void> {
+    const accounts = await this.TgAccount.getAll();
+    for (const account of accounts) {
+      await this.TgAccount.delete(account.id!);
+    }
+  }
+
+  /**
+   * Получить учетные данные по прокси
+   */
+  async getCredentialsByProxy(proxyHost: string, proxyPort: number): Promise<TelegramCredentials[]> {
+    const proxy = await this.Proxy.findByIpPort(proxyHost, proxyPort);
+    if (!proxy) {
+      return [];
+    }
+
+    const accounts = await this.TgAccount.getAll();
+    const credentials: TelegramCredentials[] = [];
+
+    for (const account of accounts) {
+      if (account.proxy_id === proxy.id) {
+        const proxyData = this.convertProxyToTelegramFormat(proxy);
+        credentials.push({
+          phone: account.phone,
+          session: account.session || undefined,
+          password: account.password || undefined,
+          proxy: proxyData
+        });
+      }
+    }
+
+    return credentials;
+  }
+
+  /**
+   * Получить учетные данные без прокси
+   */
+  async getCredentialsWithoutProxy(): Promise<TelegramCredentials[]> {
+    const accounts = await this.TgAccount.getWithoutProxy();
+    
+    return accounts.map(account => ({
+      phone: account.phone,
+      session: account.session || undefined,
+      password: account.password || undefined
+    }));
+  }
+
+  /**
+   * Получить активные учетные данные
+   */
+  async getActiveCredentials(): Promise<TelegramCredentials[]> {
+    const accounts = await this.TgAccount.getByStatus(this.TgAccountStatus.ACTIVE);
+    const credentials: TelegramCredentials[] = [];
+
+    for (const account of accounts) {
+      let proxy: TelegramClientProxy | undefined;
+      
+      if (account.proxy_id) {
+        const proxyData = await this.Proxy.findById(account.proxy_id);
+        if (proxyData && proxyData.status === this.ProxyStatus.ACTIVE) {
+          proxy = this.convertProxyToTelegramFormat(proxyData);
+        }
+      }
+
+      credentials.push({
+        phone: account.phone,
+        session: account.session || undefined,
+        password: account.password || undefined,
+        proxy
+      });
+    }
+
+    return credentials;
+  }
+
+  /**
+   * Получить случайные активные учетные данные
+   */
+  async getRandomActiveCredential(): Promise<TelegramCredentials | null> {
+    const account = await this.TgAccount.getRandomAvailable();
+    if (!account) {
+      return null;
+    }
+
+    let proxy: TelegramClientProxy | undefined;
+    if (account.proxy_id) {
+      const proxyData = await this.Proxy.findById(account.proxy_id);
+      if (proxyData && proxyData.status === this.ProxyStatus.ACTIVE) {
+        proxy = this.convertProxyToTelegramFormat(proxyData);
+      }
+    }
+
+    return {
+      phone: account.phone,
+      session: account.session || undefined,
+      password: account.password || undefined,
+      proxy
+    };
+  }
+
+  /**
+   * Обновить информацию о пользователе
+   */
+  async updateUserInfo(phone: string, userInfo: {
+    first_name?: string;
+    last_name?: string;
+    username?: string;
+    user_id?: number;
+  }): Promise<void> {
+    await this.TgAccount.updateUserInfo(phone, userInfo);
+  }
+
+  /**
+   * Обновить статус аккаунта
+   */
+  async updateAccountStatus(phone: string, status: any): Promise<void> {
+    const account = await this.TgAccount.findByPhone(phone);
+    if (account) {
+      await this.TgAccount.updateStatus(account.id!, status);
+    }
+  }
+
+  /**
+   * Отметить активность аккаунта
+   */
+  async markActivity(phone: string): Promise<void> {
+    const account = await this.TgAccount.findByPhone(phone);
+    if (account) {
+      await this.TgAccount.updateLastActivity(account.id!);
+    }
+  }
+
+  /**
+   * Получить статистику
+   */
+  async getStats(): Promise<{
+    accounts: any;
+    proxies: any;
+  }> {
+    const accountStats = await this.TgAccount.getStats();
+    const proxyStats = await this.Proxy.getStats();
+
+    return {
+      accounts: accountStats,
+      proxies: proxyStats
+    };
+  }
+
+  /**
+   * Добавить прокси в БД
+   */
+  async addProxy(proxyData: any): Promise<number> {
+    return await this.Proxy.create(proxyData);
+  }
+
+  /**
+   * Получить все прокси
+   */
+  async getAllProxies(): Promise<any[]> {
+    return await this.Proxy.getAll();
+  }
+
+  /**
+   * Получить активные прокси
+   */
+  async getActiveProxies(): Promise<any[]> {
+    return await this.Proxy.getActive();
   }
 }

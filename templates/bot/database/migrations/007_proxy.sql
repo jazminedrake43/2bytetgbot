@@ -1,0 +1,27 @@
+-- UP
+CREATE TABLE IF NOT EXISTS proxy (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  ip TEXT NOT NULL,
+  port INTEGER NOT NULL,
+  username TEXT,
+  password TEXT,
+  secret TEXT,
+  socksType INTEGER CHECK(socksType IN (4, 5)),
+  MTProxy INTEGER DEFAULT 0,
+  country TEXT,
+  status INTEGER DEFAULT 0,
+  source TEXT,
+  last_check DATETIME,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TRIGGER IF NOT EXISTS proxy_updated_at
+    AFTER UPDATE ON proxy
+    FOR EACH ROW
+BEGIN
+    UPDATE proxy SET updated_at = CURRENT_TIMESTAMP WHERE id = NEW.id;
+END;
+
+-- DOWN
+DROP TABLE IF EXISTS proxy;

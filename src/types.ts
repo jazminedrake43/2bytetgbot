@@ -156,8 +156,11 @@ export interface EnvVars {
   BOT_HOOK_SECRET_TOKEN?: string;
   BOT_DEV_HOT_RELOAD_SECTIONS?: string;
   BOT_ACCESS?: 'private' | 'public';
+  BOT_ACCESS_KEYS?: string; // comma separated access keys
   ACCESS_USERNAMES?: string; // comma separated usernames
   BOT_APP_API_PORT?: number;
+  TG_APP_ID?: string;
+  TG_APP_HASH?: string;
   [key: string]: string | number |undefined;
 }
 

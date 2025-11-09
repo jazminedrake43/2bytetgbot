@@ -211,7 +211,6 @@ export class App {
     this.registerMessageHandlers();
     await this.registerServices();
 
-
     return this;
   }
 
@@ -228,7 +227,7 @@ export class App {
     });
 
     await this.bot.launch(this.config.telegrafConfigLaunch || {});
-    
+
     if (this.config.terminateSigInt) {
       process.once("SIGINT", () => {
         this.bot?.stop("SIGINT");
@@ -255,24 +254,52 @@ export class App {
       if (!this.config.userStorage) {
         throw new Error("User storage is not set");
       }
+      
+      let startPayload: string | null = null;
+      let accessKey: string | null = null;
 
+      if (ctx?.message?.text?.startsWith("/start")) {
+        startPayload = ctx?.message?.text?.split(" ")[1] || null;
+        accessKey = startPayload && startPayload.includes("key=") ? startPayload.split("key=")[1] || null : null;
+      }
+
+      // Check access by username and register user if not exists
       if (!this.config.userStorage.exists(tgUsername)) {
-        if (!this.config.accessPublic) {
+        const isAuthByUsername = !this.config.accessPublic && !accessKey;
+
+        // check access by username for private bots
+        if (isAuthByUsername) {
           const requestUsername = this.getTgUsername(ctx);
           this.debugLog("Private access mode. Checking username:", requestUsername);
           const checkAccess =
             this.config.envConfig.ACCESS_USERNAMES &&
             this.config.envConfig.ACCESS_USERNAMES.split(",").map((name) => name.trim());
-          if (checkAccess && checkAccess.every((name) => name !== requestUsername)) {
+          if (
+            checkAccess &&
+            checkAccess.every((name) => name.toLowerCase() !== requestUsername.toLowerCase())
+          ) {
             return ctx.reply("Access denied. Your username is not in the access list.");
           }
+          this.debugLog("Username access granted.");
+        }
+        
+        // check access keys for private bots
+        if (!isAuthByUsername && accessKey) {
+          this.debugLog("Private access mode. Checking access key in start payload.");
+          const accessKeys =
+            this.config.envConfig.BOT_ACCESS_KEYS &&
+            this.config.envConfig.BOT_ACCESS_KEYS.split(",").map((key) => key.trim());
+          if (accessKeys && accessKeys.every((key) => key.toLowerCase() !== accessKey?.toLowerCase())) {
+            return ctx.reply("Access denied. Your access key is not valid.");
+          }
+          this.debugLog("Access key granted.");
         }
 
         if (!ctx.from) {
           return ctx.reply("User information is not available");
         }
 
-        const userRefIdFromStart = ctx.startPayload ? parseInt(ctx.startPayload) : 0;
+        const userRefIdFromStart = startPayload ? parseInt(startPayload) : 0;
 
         await this.registerUser({
           user_refid: userRefIdFromStart,
@@ -403,15 +430,17 @@ export class App {
 
     const registerServices = async (pathDirectory: string) => {
       try {
-        await this.apiServiceManager.loadServicesFromDirectory(
-          pathDirectory
-        );
+        await this.apiServiceManager.loadServicesFromDirectory(pathDirectory);
       } catch (error) {
         this.debugLog("Error loading services:", error);
         throw error;
       }
 
-      this.debugLog("Registered API services:%s in dir: %s", Array.from(this.apiServiceManager.getAll().keys()), pathDirectory);
+      this.debugLog(
+        "Registered API services:%s in dir: %s",
+        Array.from(this.apiServiceManager.getAll().keys()),
+        pathDirectory
+      );
 
       for (const [name, service] of this.apiServiceManager.getAll()) {
         await service.setup();
@@ -881,6 +910,7 @@ export class App {
 
       if (this.config.userStorage) {
         this.config.userStorage.add(data.tg_username, user);
+        this.debugLog('User added to storage:', data.tg_username);
       }
 
       return user;
