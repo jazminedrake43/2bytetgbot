@@ -254,13 +254,16 @@ export class App {
       if (!this.config.userStorage) {
         throw new Error("User storage is not set");
       }
-      
+
       let startPayload: string | null = null;
       let accessKey: string | null = null;
 
       if (ctx?.message?.text?.startsWith("/start")) {
         startPayload = ctx?.message?.text?.split(" ")[1] || null;
-        accessKey = startPayload && startPayload.includes("key=") ? startPayload.split("key=")[1] || null : null;
+        accessKey =
+          startPayload && startPayload.includes("key=")
+            ? startPayload.split("key=")[1] || null
+            : null;
       }
 
       // Check access by username and register user if not exists
@@ -282,14 +285,17 @@ export class App {
           }
           this.debugLog("Username access granted.");
         }
-        
+
         // check access keys for private bots
         if (!isAuthByUsername && accessKey) {
           this.debugLog("Private access mode. Checking access key in start payload.");
           const accessKeys =
             this.config.envConfig.BOT_ACCESS_KEYS &&
             this.config.envConfig.BOT_ACCESS_KEYS.split(",").map((key) => key.trim());
-          if (accessKeys && accessKeys.every((key) => key.toLowerCase() !== accessKey?.toLowerCase())) {
+          if (
+            accessKeys &&
+            accessKeys.every((key) => key.toLowerCase() !== accessKey?.toLowerCase())
+          ) {
             return ctx.reply("Access denied. Your access key is not valid.");
           }
           this.debugLog("Access key granted.");
@@ -729,8 +735,15 @@ export class App {
       pathSectionModule += "?update=" + Date.now();
     }
 
-    const sectionClass = (await import(pathSectionModule)).default;
-
+    // Для обхода кеша в Node.js/Bun используем file:// протокол с query параметром
+    let importPath = pathSectionModule;
+    if (freshVersion) {
+      // Преобразуем путь в file:// URL с query параметром
+      const fileUrl = new URL(`file:///${pathSectionModule.replace(/\\/g, "/")}`);
+      fileUrl.searchParams.set("t", Date.now().toString());
+      importPath = fileUrl.href;
+    }
+    const sectionClass = (await import(importPath)).default as typeof Section;
     this.debugLog("Loaded section", sectionId);
 
     return sectionClass;
@@ -772,6 +785,7 @@ export class App {
       }
       sectionClass = this.sectionClasses.get(sectionId) as typeof Section;
     }
+    this.debugLog("Using section class:", sectionClass);
 
     const sectionInstance: Section = new sectionClass({
       ctx,
@@ -910,7 +924,7 @@ export class App {
 
       if (this.config.userStorage) {
         this.config.userStorage.add(data.tg_username, user);
-        this.debugLog('User added to storage:', data.tg_username);
+        this.debugLog("User added to storage:", data.tg_username);
       }
 
       return user;

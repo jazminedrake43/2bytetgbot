@@ -140,7 +140,7 @@ export class CreateBotCommand {
         content = Mustache.render(content, config);
         
         // Write processed content
-        await fs.writeFile(targetItemPath, content);
+        await fs.writeFile(targetItemPath, content, 'utf-8');
       }
     }
   }
