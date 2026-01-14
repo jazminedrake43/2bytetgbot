@@ -735,10 +735,10 @@ export class App {
       pathSectionModule += "?update=" + Date.now();
     }
 
-    // Для обхода кеша в Node.js/Bun используем file:// протокол с query параметром
+    // For bypassing cache in Node.js/Bun, we use file:// protocol with a query parameter
     let importPath = pathSectionModule;
     if (freshVersion) {
-      // Преобразуем путь в file:// URL с query параметром
+      // We convert the path to a file:// URL with a query parameter
       const fileUrl = new URL(`file:///${pathSectionModule.replace(/\\/g, "/")}`);
       fileUrl.searchParams.set("t", Date.now().toString());
       importPath = fileUrl.href;

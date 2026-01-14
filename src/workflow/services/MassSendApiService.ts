@@ -1,3 +1,4 @@
+import { ExtraReplyMessage } from 'telegraf/typings/telegram-types';
 import { ApiService} from '../../core/ApiService';
 import { App } from '../../core/App';
 import { UserModel } from '../../user/UserModel';
@@ -26,7 +27,7 @@ export default class MassSendApiService extends ApiService {
             port: this.app.configApp.envConfig.BOT_APP_API_PORT || 3033,
             routes: {
                 '/': async (req) => {
-                    const receivedData = (await req.json()) as { userIds?: number[]; message?: string };
+                    const receivedData = (await req.json()) as { userIds?: number[]; message?: string, extra?: ExtraReplyMessage };
                     this.app.debugLog("Received data for mass message:", receivedData);
 
                     let userIds: number[] = [];
@@ -37,7 +38,7 @@ export default class MassSendApiService extends ApiService {
                         message = receivedData?.message || "Hello from MassSendApiService";
                     }
 
-                    this.sendMassMessage(userIds, message);
+                    this.sendMassMessage(userIds, message, receivedData.extra);
 
                     return Response.json({ status: 200, body: 'Mass message sending initiated.' });
                 }
@@ -49,7 +50,7 @@ export default class MassSendApiService extends ApiService {
         return Promise.resolve();
     }
 
-    private async sendMassMessage(userIds: number[] = [], message: string): Promise<void> {
+    private async sendMassMessage(userIds: number[] = [], message: string, extra?: ExtraReplyMessage): Promise<void> {
         if (userIds.length === 0) {
 
             if (!db) {
@@ -68,9 +69,11 @@ export default class MassSendApiService extends ApiService {
                     this.app.debugLog(`Sending message to user ID: ${user.tgId} username: ${user.username}`);
 
                     try {
-                        await this.app.bot.telegram.sendMessage(user.tgId, message);
+                        const extraOptions = extra || {};
+                        await this.app.bot.telegram.sendMessage(user.tgId, message, extraOptions);
                         this.app.debugLog(`Message sent to user ID: ${user.tgId} username: ${user.username}`);
                     } catch (error) {
+                        this.app.debugLog(`Sending message ${message} to user ID: ${user.tgId} username: ${user.username} failed`, error);
                         this.app.debugLog(`Failed to send message to user ID: ${user.tgId} username: ${user.username}`, error);
                     }
                 }
