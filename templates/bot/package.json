@@ -1,6 +1,6 @@
 {
   "name": "{{kebabName}}",
-  "version": "1.0.0",
+  "version": "1.0.8",
   "description": "{{description}}",
   "main": "bot.ts",
   "scripts": {
