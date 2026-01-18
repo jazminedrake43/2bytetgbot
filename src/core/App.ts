@@ -731,19 +731,23 @@ export class App {
       throw new Error(`Section ${sectionId} not found at path ${pathSectionModule}.ts`);
     }
 
-    if (freshVersion) {
-      pathSectionModule += "?update=" + Date.now();
+    // For bypassing cache in Bun, we need to clear the module cache
+    if (freshVersion && typeof Bun !== 'undefined') {
+      // Clear Bun's module cache for this specific module
+      const modulePath = pathSectionModule + ".ts";
+      this.debugLog('Clearing cache for fresh version of section:', modulePath);
+      
+      // In Bun, we can use dynamic import with a unique query to bypass cache
+      // But we need to resolve the absolute path first
+      const absolutePath = path.resolve(modulePath);
+      
+      // Try to delete from require cache if it exists
+      if (require.cache && require.cache[absolutePath]) {
+        delete require.cache[absolutePath];
+      }
     }
-
-    // For bypassing cache in Node.js/Bun, we use file:// protocol with a query parameter
-    let importPath = pathSectionModule;
-    if (freshVersion) {
-      // We convert the path to a file:// URL with a query parameter
-      const fileUrl = new URL(`file:///${pathSectionModule.replace(/\\/g, "/")}`);
-      fileUrl.searchParams.set("t", Date.now().toString());
-      importPath = fileUrl.href;
-    }
-    const sectionClass = (await import(importPath)).default as typeof Section;
+    
+    const sectionClass = (await import(pathSectionModule)).default as typeof Section;
     this.debugLog("Loaded section", sectionId);
 
     return sectionClass;

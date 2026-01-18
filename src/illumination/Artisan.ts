@@ -46,9 +46,9 @@ export class Artisan {
    * Возвращает шаблон для новой секции
    */
   private getSectionTemplate(name: string): string {
-    return `import { Section } from "../../src/illumination/Section";
-import { SectionOptions } from "../../src/types";
-import { InlineKeyboard } from "../../src/illumination/InlineKeyboard";
+    return `import { Section } from "@2byte/tgbot-framework";
+import { SectionOptions } from "@2byte/tgbot-framework";
+import { InlineKeyboard } from "@2byte/tgbot-framework";
 
 export default class ${name}Section extends Section {
   static command = "${name.toLowerCase()}";
