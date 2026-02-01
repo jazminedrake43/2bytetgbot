@@ -46,7 +46,7 @@ export class App {
 
   public bot!: Telegraf<Telegraf2byteContext>;
   private sectionClasses: Map<string, typeof Section> = new Map();
-  private runnedSections: WeakMap<UserModel, RunnedSection | Map<string, RunnedSection>> =
+  private runnedSections: WeakMap<UserModel, RunnedSection[]> =
     new WeakMap();
   private middlewares: CallableFunction[] = [];
   private apiServiceManager!: ApiServiceManager;
@@ -791,56 +791,68 @@ export class App {
     }
     this.debugLog("Using section class:", sectionClass);
 
-    const sectionInstance: Section = new sectionClass({
-      ctx,
-      bot: this.bot,
-      app: this,
-      route: sectionRoute,
-    } as SectionOptions);
+    let sectionInstance: Section | undefined;
 
-    let runnedSection;
-    let userRunnedSections: Map<string, RunnedSection> | RunnedSection | undefined;
+    const createSectionInstance = (sectionClass: typeof Section) => {
+      return new sectionClass({
+        ctx,
+        bot: this.bot,
+        app: this,
+        route: sectionRoute,
+      } as SectionOptions);
+    };
+
+    const createRunnedSection = (instance: Section, route: RunSectionRoute): RunnedSection => {
+      return {
+        instance,
+        route,
+      };
+    };
+
+    const findRunnedSection = () => {
+      const userRunnedSections = this.runnedSections.get(ctx.user);
+      if (userRunnedSections && Array.isArray(userRunnedSections)) {
+        return userRunnedSections.find((section) => section.route.getSection() === sectionId);
+      }
+      return undefined;
+    };
+
+    let isRestoredSection = false;
+    let runnedSection : RunnedSection | undefined = undefined;
     let sectionInstalled = false;
+    let createdNewSectionInstance = false;
 
     if (this.config.keepSectionInstances) {
-      userRunnedSections = this.runnedSections.get(ctx.user);
-      if (userRunnedSections instanceof Map) {
-        runnedSection &&= userRunnedSections.get(sectionId);
+      runnedSection = findRunnedSection();
+      if (runnedSection) {
+        isRestoredSection = true;
+      } else {
+        createdNewSectionInstance = true;
       }
     } else {
-      runnedSection &&= this.runnedSections.get(ctx.user);
+      createdNewSectionInstance = true;
     }
-    if (runnedSection) {
+
+    if (isRestoredSection) {
       this.debugLog(`Restored a runned section for user ${ctx.user.username}:`, runnedSection);
     }
 
-    if (!runnedSection && this.config.keepSectionInstances) {
-      if (userRunnedSections instanceof Map) {
-        userRunnedSections.set(sectionId, {
-          instance: sectionInstance,
-          route: sectionRoute,
-        });
-        sectionInstalled = true;
-      } else if (userRunnedSections === undefined) {
-        userRunnedSections = new Map<string, RunnedSection>([
-          [
-            sectionId,
-            {
-              instance: sectionInstance,
-              route: sectionRoute,
-            },
-          ],
-        ]);
-        sectionInstalled = true;
+    if (createdNewSectionInstance) {
+      this.debugLog(`Creating new section instance for user ${ctx.user.username}`);
+      runnedSection = createRunnedSection(createSectionInstance(sectionClass), sectionRoute);
+
+      if (this.config.keepSectionInstances) {
+        if (!this.runnedSections.has(ctx.user)) {
+          this.runnedSections.set(ctx.user, []);
+        }
+        (this.runnedSections.get(ctx.user) as RunnedSection[]).push(runnedSection);
       }
     }
 
-    if (!runnedSection && !this.config.keepSectionInstances) {
-      this.runnedSections.set(ctx.user, {
-        instance: sectionInstance,
-        route: sectionRoute,
-      });
-      sectionInstalled = true;
+    if (runnedSection) {
+      sectionInstance = runnedSection.instance;
+    } else {
+      throw new Error(`Failed to create or retrieve runned section for ${sectionId}`);
     }
 
     if (!(sectionInstance as any)[method]) {
