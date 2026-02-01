@@ -1,6 +1,7 @@
 import type { Section, Telegraf2byteContext } from "@2byte/tgbot-framework";
 import Message2byte from "./Message2Byte";
 import Message2ByteLiveProgressive from "./Message2ByteLiveProgressive";
+import { InlineKeyboard } from "./InlineKeyboard";
 
 export default class Message2bytePool {
     private message2byte: Message2byte;
@@ -59,6 +60,11 @@ export default class Message2bytePool {
 
     liveProgressive(): Message2ByteLiveProgressive {
         return Message2ByteLiveProgressive.init(this.message2byte, this);
+    }
+
+    inlineKeyboard(keyboard: InlineKeyboard): this {
+        this.message2byte.inlineKeyboard(keyboard);
+        return this;
     }
 
     async send() {

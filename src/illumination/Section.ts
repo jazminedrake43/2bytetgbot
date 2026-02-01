@@ -310,7 +310,7 @@ export class Section {
     return false;
   }
 
-  backInlineButtion(data: string): any {
+  backInlineButton(data: string): any {
     return this.markup.button.callback(this.labelBack, data);
   }
 
