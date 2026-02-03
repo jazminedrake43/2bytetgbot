@@ -213,13 +213,13 @@ export default class Message2byte {
           const editedText = this.editMessageText(this.messageValue, this.messageExtra);
 
           if (editedText && 'message_id' in editedText) {
-            this.messageId = editedText.message_id as number;
+            // this.messageId = editedText.message_id as number;
           }
 
           return editedText;
         }
       } else {
-        this.messageExtra.message_id = this.messageId;
+        // this.messageExtra.message_id = this.messageId;
 
         const messageEntity = await this.editMessageText(this.messageValue, this.messageExtra);
 
@@ -237,7 +237,7 @@ export default class Message2byte {
 
     const replyEntity = this.ctx.reply(this.messageValue, this.messageExtra);
 
-    this.messageId = (await replyEntity).message_id;
+    // this.messageId = (await replyEntity).message_id;
 
     return replyEntity;
   }

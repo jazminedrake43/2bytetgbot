@@ -396,6 +396,16 @@ export class Section {
       : this.createPoolNewMessage(message);
   }
 
+  updateCtx(newCtx: Telegraf2byteContext): this {
+    this.ctx = newCtx;
+    return this;
+  }
+
+  updateRoute(newRoute: RunSectionRoute): this {
+    this.route = newRoute;
+    return this;
+  }
+
   getCtx(): Telegraf2byteContext {
     return this.ctx;
   }

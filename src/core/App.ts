@@ -205,9 +205,9 @@ export class App {
       middleware();
     });
 
+    this.registerCommands();
     this.registerActionForCallbackQuery();
     this.registerHears();
-    this.registerCommands();
     this.registerMessageHandlers();
     await this.registerServices();
 
@@ -702,7 +702,7 @@ export class App {
       this.debugLog(`Register command ${command} for section ${sectionId}`);
       if (command) {
         this.bot.command(command, async (ctx: Telegraf2byteContext) => {
-          const sectionRoute = new RunSectionRoute().section(sectionId).method("index");
+          const sectionRoute = new RunSectionRoute().section(sectionId).method("index").runAsCommand();
           await this.runSection(ctx, sectionRoute);
         });
       }
@@ -819,12 +819,18 @@ export class App {
 
     let isRestoredSection = false;
     let runnedSection : RunnedSection | undefined = undefined;
-    let sectionInstalled = false;
     let createdNewSectionInstance = false;
 
     if (this.config.keepSectionInstances) {
       runnedSection = findRunnedSection();
       if (runnedSection) {
+        runnedSection.instance
+          .updateCtx(ctx);
+
+          if (sectionRoute.runIsCallbackQuery) {
+            runnedSection.route.runAsCallbackQuery();
+          }
+
         isRestoredSection = true;
       } else {
         createdNewSectionInstance = true;
@@ -834,7 +840,7 @@ export class App {
     }
 
     if (isRestoredSection) {
-      this.debugLog(`Restored a runned section for user ${ctx.user.username}:`, runnedSection);
+      this.debugLog(`Restored a runned section for user ${ctx.user.username}:`, runnedSection?.instance.sectionId);
     }
 
     if (createdNewSectionInstance) {
@@ -874,14 +880,12 @@ export class App {
     const unsetupMethod = sectionInstance.unsetup;
 
     // Run setup if section is installed
-    if (sectionInstalled && setupMethod && typeof setupMethod === "function") {
-      if (sectionInstalled) {
+    if (createdNewSectionInstance && setupMethod && typeof setupMethod === "function") {
         this.debugLog(`[Setup] Section ${sectionId} install for user ${ctx.user.username}`);
         await sectionInstance.setup();
         this.debugLog(
           `[Setup finish] Section ${sectionId} installed for user ${ctx.user.username}`
         );
-      }
     }
 
     // Run up method

@@ -47,6 +47,16 @@ export class RunSectionRoute {
     return this;
   }
 
+  runAsCommand(): this {
+    this.runParams.runAsCallcackQuery = false;
+    return this;
+  }
+
+  runAsCallbackQuery(): this {
+    this.runParams.runAsCallcackQuery = true;
+    return this;
+  }
+
   getMethod(): string | null {
     return this.runParams.method;
   }
