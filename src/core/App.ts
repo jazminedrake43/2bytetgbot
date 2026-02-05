@@ -377,7 +377,7 @@ export class App {
         const sectionRoute = new RunSectionRoute()
           .section(sectionId)
           .method(method)
-          .actionPath(actionPath);
+          .callbackParams(actionPath, actionParams.toString());
 
         this.runSection(ctx, sectionRoute).catch((err) => {
           this.debugLog("Error running section:", err);
@@ -575,6 +575,7 @@ export class App {
 
           // Если указан runSection, выполняем его
           if (runSection) {
+            runSection.runAsCommand();
             await this.runSection(ctx, runSection);
           }
         } else {
@@ -825,11 +826,11 @@ export class App {
       runnedSection = findRunnedSection();
       if (runnedSection) {
         runnedSection.instance
-          .updateCtx(ctx);
+          .updateCtx(ctx)
+          .updateRoute(sectionRoute)
+          .setCallbackParams(sectionRoute.getCallbackParams());
 
-          if (sectionRoute.runIsCallbackQuery) {
-            runnedSection.route.runAsCallbackQuery();
-          }
+          runnedSection.route.runAsCallbackQuery(sectionRoute.runIsCallbackQuery);
 
         isRestoredSection = true;
       } else {

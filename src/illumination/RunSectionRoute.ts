@@ -6,7 +6,7 @@ export class RunSectionRoute {
     method: null,
     methodArgs: null,
     callbackParams: new URLSearchParams(),
-    runAsCallcackQuery: false,
+    runAsCallbackQuery: false,
     actionPath: null,
     hearsKey: null,
   };
@@ -20,7 +20,7 @@ export class RunSectionRoute {
 
   method(name: string = 'index', isRunCallbackQuery: boolean = false): this {
     this.runParams.method = name;
-    this.runParams.runAsCallcackQuery = isRunCallbackQuery;
+    this.runParams.runAsCallbackQuery = isRunCallbackQuery;
     return this;
   }
 
@@ -32,13 +32,13 @@ export class RunSectionRoute {
   callbackParams(actionPath: string, params: string | Record<string, string>): this {
     this.runParams.callbackParams = new URLSearchParams(params);
     this.actionPath(actionPath);
-    this.runParams.runAsCallcackQuery = true;
+    this.runParams.runAsCallbackQuery = true;
     return this;
   }
 
   actionPath(path: string): this {
     this.runParams.actionPath = path;
-    this.runParams.runAsCallcackQuery = true;
+    this.runParams.runAsCallbackQuery = true;
     return this;
   }
 
@@ -47,13 +47,13 @@ export class RunSectionRoute {
     return this;
   }
 
-  runAsCommand(): this {
-    this.runParams.runAsCallcackQuery = false;
+  runAsCommand(flag: boolean = true): this {
+    this.runParams.runAsCallbackQuery = !flag;
     return this;
   }
 
-  runAsCallbackQuery(): this {
-    this.runParams.runAsCallcackQuery = true;
+  runAsCallbackQuery(flag: boolean = true): this {
+    this.runParams.runAsCallbackQuery = flag;
     return this;
   }
 
@@ -90,6 +90,6 @@ export class RunSectionRoute {
   }
 
   get runIsCallbackQuery(): boolean {
-    return this.runParams.runAsCallcackQuery;
+    return this.runParams.runAsCallbackQuery;
   }
 }

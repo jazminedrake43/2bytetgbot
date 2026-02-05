@@ -1,6 +1,6 @@
 import { Telegraf2byteContext } from "./Telegraf2byteContext";
 import { Input, Markup } from "telegraf";
-import type { ReplyKeyboardMarkup } from 'telegraf/core/types/telegram';
+import type { ReplyKeyboardMarkup } from "telegraf/core/types/telegram";
 import { InlineKeyboard } from "./InlineKeyboard";
 import { RequestInputOptions } from "../types";
 import { Message } from "telegraf/types";
@@ -198,21 +198,20 @@ export default class Message2byte {
       }
 
       const message = this.ctx.callbackQuery?.message as Message;
-      
+
       if (message) {
-        if ('media_group_id' in message || 'caption' in message) {
+        if ("media_group_id" in message || "caption" in message) {
           const editMessageCaption = this.editMessageCaption(this.messageValue, this.messageExtra);
 
-          if (editMessageCaption && 'message_id' in editMessageCaption) {
+          if (editMessageCaption && "message_id" in editMessageCaption) {
             this.messageId = editMessageCaption.message_id as number;
           }
 
           return editMessageCaption;
         } else {
-
           const editedText = this.editMessageText(this.messageValue, this.messageExtra);
 
-          if (editedText && 'message_id' in editedText) {
+          if (editedText && "message_id" in editedText) {
             // this.messageId = editedText.message_id as number;
           }
 
@@ -221,13 +220,15 @@ export default class Message2byte {
       } else {
         // this.messageExtra.message_id = this.messageId;
 
-        const messageEntity = await this.editMessageText(this.messageValue, this.messageExtra);
+        try {
+          const messageEntity = await this.editMessageText(this.messageValue, this.messageExtra);
 
-        if (typeof messageEntity === "object" && 'message_id' in messageEntity) {
-          this.messageId = messageEntity.message_id as number;
-        }
-        
-        return messageEntity;
+          if (typeof messageEntity === "object" && "message_id" in messageEntity) {
+            this.messageId = messageEntity.message_id as number;
+          }
+
+          return messageEntity;
+        } catch (e) {}
       }
     }
 

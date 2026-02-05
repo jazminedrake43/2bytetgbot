@@ -133,7 +133,7 @@ export interface RunSectionRouteParams {
   method: string | null;
   methodArgs: any[] | null;
   callbackParams: URLSearchParams;
-  runAsCallcackQuery: boolean;
+  runAsCallbackQuery: boolean;
   actionPath: string | null;
   hearsKey: string | null;
 }
