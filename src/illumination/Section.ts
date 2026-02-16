@@ -320,6 +320,7 @@ export class Section {
 
   setCallbackParams(params: URLSearchParams): this {
     this.callbackParams = params;
+
     return this;
   }
 
@@ -416,5 +417,13 @@ export class Section {
 
   getPreviousSection(): RunnedSection | undefined {
     return this.ctx.userSession.previousSection;
+  }
+
+  setProperty(key: string, value: any): void {
+    (this as any)[key] = value;
+  }
+
+  getProperty(key: string): any {
+    return (this as any)[key];
   }
 }

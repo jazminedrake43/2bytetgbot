@@ -20,6 +20,7 @@ import {
 } from "../types";
 import { nameToCapitalize } from "./utils";
 import { ApiServiceManager } from "./ApiServiceManager";
+import { message } from "telegraf/filters";
 
 export class App {
   private config: AppConfig = {
@@ -46,8 +47,7 @@ export class App {
 
   public bot!: Telegraf<Telegraf2byteContext>;
   private sectionClasses: Map<string, typeof Section> = new Map();
-  private runnedSections: WeakMap<UserModel, RunnedSection[]> =
-    new WeakMap();
+  private runnedSections: WeakMap<UserModel, RunnedSection[]> = new WeakMap();
   private middlewares: CallableFunction[] = [];
   private apiServiceManager!: ApiServiceManager;
 
@@ -71,6 +71,8 @@ export class App {
       messageQueue?: Array<{ message: string; source: "task" | "external" }>;
     }
   > = new Map();
+
+  private messageHandlers: any[] = [];
 
   constructor() {
     this.middlewares.push(this.mainMiddleware.bind(this));
@@ -155,6 +157,11 @@ export class App {
 
     sections(sectionsList: SectionList): this {
       this.app.config.sections = sectionsList;
+      return this;
+    }
+
+    messageHandlers(handlers: any[]): this {
+      this.app.messageHandlers = handlers;
       return this;
     }
 
@@ -404,30 +411,59 @@ export class App {
 
   registerMessageHandlers() {
     // Register message handler for text messages
-    this.bot.on("text", async (ctx: Telegraf2byteContext) => {
-      this.debugLog("Received text message:", (ctx.update as any).message?.text);
+    this.bot.on(message("text"), async (ctx: Telegraf2byteContext) => {
+      this.debugLog("[registerMessageHandlers]: received text", (ctx.update as any).message?.text);
       const messageText = (ctx.update as any).message?.text;
       if (!messageText) return;
 
       await this.handleUserInput(ctx, messageText, "text");
+
+      // otherwise, if not handled by awaitingInput or awaitingInputPromise, we can check if user is in a section that has a message handler
+      if (
+        !ctx.userSession.awaitingInput &&
+        !ctx.userSession.awaitingInputPromise &&
+        !ctx.userSession.stateAfterValidatedUserResponse
+      ) {
+        this.messageHandlers.forEach(async (handler: any) => {
+          const handlerIsClass =
+            typeof handler === "function" && /^\s*class\s+/.test(handler.toString());
+          const nameHandler = handlerIsClass
+            ? handler.name
+            : handler.constructor?.name || "unknown";
+
+          this.debugLog("Handling message with handler class:", nameHandler);
+
+          if (handlerIsClass) {
+            await new handler(this).handle(ctx);
+          }
+        });
+      } else {
+        this.debugLog("Message input already handled by awaitingInput or awaitingInputPromise. stateAfterValidatedUserResponse:", ctx.userSession.stateAfterValidatedUserResponse);
+      }
+
+      delete ctx.userSession.stateAfterValidatedUserResponse; // Clear the state after handling the message
     });
 
     // Register message handler for documents/files
-    this.bot.on("document", async (ctx: Telegraf2byteContext) => {
+    this.bot.on(message("document"), async (ctx: Telegraf2byteContext) => {
       const document = (ctx.update as any).message?.document;
       if (!document) return;
 
       await this.handleUserInput(ctx, document, "file");
+
+      delete ctx.userSession.stateAfterValidatedUserResponse; // Clear the state after handling the message
     });
 
     // Register message handler for photos
-    this.bot.on("photo", async (ctx: Telegraf2byteContext) => {
+    this.bot.on(message("photo"), async (ctx: Telegraf2byteContext) => {
       const photo = (ctx.update as any).message?.photo;
       if (!photo || !photo.length) return;
 
-      // Берем фото с наибольшим разрешением
+      // Get the largest photo (the last one in the array is usually the largest)
       const largestPhoto = photo[photo.length - 1];
       await this.handleUserInput(ctx, largestPhoto, "photo");
+      
+      delete ctx.userSession.stateAfterValidatedUserResponse; // Clear the state after handling the message
     });
   }
 
@@ -478,7 +514,7 @@ export class App {
     inputValue: any,
     inputType: "text" | "file" | "photo"
   ) {
-    // Обработка awaitingInputPromise (для requestInputWithAwait)
+    // Handling awaitingInputPromise (for requestInputWithAwait)
     if (ctx.userSession.awaitingInputPromise) {
       this.debugLog("Handling input for awaitingInputPromise");
       const awaitingPromise = ctx.userSession.awaitingInputPromise;
@@ -503,18 +539,20 @@ export class App {
         this.debugLog(`Input validation result for key ${key}:`, isValid);
 
         if (isValid) {
-          // Сохраняем ответ в сессии
+          // save the input value in user session under the specified key
           ctx.userSession[key] = inputValue;
-          // Очищаем состояние ожидания
+          // clear the awaiting promise state
           delete ctx.userSession.awaitingInputPromise;
-          // Разрешаем Promise
+
+          ctx.userSession.stateAfterValidatedUserResponse = true; // Set a flag to indicate that we are now in the state after receiving input
+          // Resolve the Promise
           resolve(inputValue);
           ctx.deleteLastMessage();
         } else {
-          // Увеличиваем счетчик попыток
+          // Increase the retry count
           awaitingPromise.retryCount = retryCount + 1;
 
-          // Отправляем сообщение об ошибке
+          // Send an error message
           let errorMsg = errorMessage;
           if (awaitingPromise.retryCount > 1) {
             errorMsg += ` (попытка ${awaitingPromise.retryCount})`;
@@ -535,19 +573,19 @@ export class App {
             ]),
           });
 
-          // НЕ очищаем состояние ожидания - пользователь остается в режиме ввода
-          // Состояние будет очищено только при успешном вводе или отмене
+          // Do not clear the awaiting state - the user remains in input mode
+          // The state will be cleared only upon successful input or cancellation
         }
       } catch (error) {
-        await ctx.reply(`Ошибка валидации: ${error}`);
+        await ctx.reply(`Validation error: ${error}`);
         if (allowCancel) {
-          await ctx.reply('Используйте кнопку "Отмена" для отмены ввода.');
+          await ctx.reply('Use the "Cancel" button to cancel input.');
         }
       }
       return;
     }
 
-    // Обработка awaitingInput (для requestInput с callback)
+    // Handling awaitingInput (for requestInput with callback)
     if (ctx.userSession.awaitingInput) {
       const awaitingInput = ctx.userSession.awaitingInput;
       const {
@@ -568,46 +606,48 @@ export class App {
         );
 
         if (isValid) {
-          // Сохраняем ответ в сессии
+          // save the input value in user session under the specified key
           ctx.userSession[key] = inputValue;
-          // Очищаем состояние ожидания
+          // clear the awaiting promise state
           delete ctx.userSession.awaitingInput;
 
-          // Если указан runSection, выполняем его
+          ctx.userSession.stateAfterValidatedUserResponse = true; // Set a flag to indicate that we are now in the state after receiving input
+
+          // If runSection is specified, execute it
           if (runSection) {
             runSection.runAsCommand();
             await this.runSection(ctx, runSection);
           }
         } else {
-          // Увеличиваем счетчик попыток
+          // Increase the retry count
           awaitingInput.retryCount = retryCount + 1;
 
-          // Отправляем сообщение об ошибке
+          // Send an error message
           let errorMsg = errorMessage;
           if (awaitingInput.retryCount > 1) {
-            errorMsg += ` (попытка ${awaitingInput.retryCount})`;
+            errorMsg += ` (attempt ${awaitingInput.retryCount})`;
           }
           if (allowCancel) {
-            errorMsg += '\n\nИспользуйте кнопку "Отмена" для отмены ввода.';
+            errorMsg += '\n\nUse the "Cancel" button to cancel input.';
           }
 
           await ctx.reply(errorMsg, {
             ...Markup.inlineKeyboard([
               [
                 Markup.button.callback(
-                  "Отмена",
+                  "Cancel",
                   ctx?.userSession?.previousSection?.route?.getActionPath() ?? "home.index"
                 ),
               ],
             ]),
           });
 
-          // НЕ очищаем состояние ожидания - пользователь остается в режиме ввода
+          // Do not clear the awaiting state - the user remains in input mode
         }
       } catch (error) {
-        await ctx.reply(`Ошибка валидации: ${error}`);
+        await ctx.reply(`Validation error: ${error}`);
         if (allowCancel) {
-          await ctx.reply('Используйте кнопку "Отмена" для отмены ввода.');
+          await ctx.reply('Use the "Cancel" button to cancel input.');
         }
       }
       return;
@@ -703,7 +743,10 @@ export class App {
       this.debugLog(`Register command ${command} for section ${sectionId}`);
       if (command) {
         this.bot.command(command, async (ctx: Telegraf2byteContext) => {
-          const sectionRoute = new RunSectionRoute().section(sectionId).method("index").runAsCommand();
+          const sectionRoute = new RunSectionRoute()
+            .section(sectionId)
+            .method("index")
+            .runAsCommand();
           await this.runSection(ctx, sectionRoute);
         });
       }
@@ -733,21 +776,21 @@ export class App {
     }
 
     // For bypassing cache in Bun, we need to clear the module cache
-    if (freshVersion && typeof Bun !== 'undefined') {
+    if (freshVersion && typeof Bun !== "undefined") {
       // Clear Bun's module cache for this specific module
       const modulePath = pathSectionModule + ".ts";
-      this.debugLog('Clearing cache for fresh version of section:', modulePath);
-      
+      this.debugLog("Clearing cache for fresh version of section:", modulePath);
+
       // In Bun, we can use dynamic import with a unique query to bypass cache
       // But we need to resolve the absolute path first
       const absolutePath = path.resolve(modulePath);
-      
+
       // Try to delete from require cache if it exists
       if (require.cache && require.cache[absolutePath]) {
         delete require.cache[absolutePath];
       }
     }
-    
+
     const sectionClass = (await import(pathSectionModule)).default as typeof Section;
     this.debugLog("Loaded section", sectionId);
 
@@ -770,7 +813,11 @@ export class App {
     }
   }
 
-  async runSection(ctx: Telegraf2byteContext, sectionRoute: RunSectionRoute): Promise<void> {
+  async runSection(
+    ctx: Telegraf2byteContext,
+    sectionRoute: RunSectionRoute,
+    params: Partial<{ cbBeforeRunMethod: (sectionInstance: Section) => Promise<void> }> = {}
+  ): Promise<void> {
     const sectionId = sectionRoute.getSection();
     const method = sectionRoute.getMethod();
 
@@ -819,7 +866,7 @@ export class App {
     };
 
     let isRestoredSection = false;
-    let runnedSection : RunnedSection | undefined = undefined;
+    let runnedSection: RunnedSection | undefined = undefined;
     let createdNewSectionInstance = false;
 
     if (this.config.keepSectionInstances) {
@@ -830,7 +877,7 @@ export class App {
           .updateRoute(sectionRoute)
           .setCallbackParams(sectionRoute.getCallbackParams());
 
-          runnedSection.route.runAsCallbackQuery(sectionRoute.runIsCallbackQuery);
+        runnedSection.route.runAsCallbackQuery(sectionRoute.runIsCallbackQuery);
 
         isRestoredSection = true;
       } else {
@@ -841,13 +888,15 @@ export class App {
     }
 
     if (isRestoredSection) {
-      this.debugLog(`Restored a runned section for user ${ctx.user.username}:`, runnedSection?.instance.sectionId);
+      this.debugLog(
+        `Restored a runned section for user ${ctx.user.username}:`,
+        runnedSection?.instance.sectionId
+      );
     }
 
     if (createdNewSectionInstance) {
       this.debugLog(`Creating new section instance for user ${ctx.user.username}`);
       runnedSection = createRunnedSection(createSectionInstance(sectionClass), sectionRoute);
-
       if (this.config.keepSectionInstances) {
         if (!this.runnedSections.has(ctx.user)) {
           this.runnedSections.set(ctx.user, []);
@@ -866,6 +915,23 @@ export class App {
       throw new Error(`Method ${method} not found in section ${sectionId}`);
     }
 
+    if (params.cbBeforeRunMethod) {
+      this.debugLog("Executing callback before running all method for section:", sectionId);
+      await params.cbBeforeRunMethod(sectionInstance);
+    }
+
+    if (sectionRoute.hasTriggers()) {
+      this.debugLog("Section route has triggers, executing them before running method:", sectionId);
+      sectionRoute.getTriggers().forEach((trigger) => {
+        if (trigger.name === 'cbBeforeRunMethod') {
+          this.debugLog(`Executing cbBeforeRunMethod trigger for section ${sectionId}`);
+          this.debugLog("Trigger details:", trigger);
+
+          trigger.cb(sectionInstance);
+        }
+      });
+    }
+
     /**
      * Run section methods in the following order:
      * 1. setup (if section is installed)
@@ -882,11 +948,9 @@ export class App {
 
     // Run setup if section is installed
     if (createdNewSectionInstance && setupMethod && typeof setupMethod === "function") {
-        this.debugLog(`[Setup] Section ${sectionId} install for user ${ctx.user.username}`);
-        await sectionInstance.setup();
-        this.debugLog(
-          `[Setup finish] Section ${sectionId} installed for user ${ctx.user.username}`
-        );
+      this.debugLog(`[Setup] Section ${sectionId} install for user ${ctx.user.username}`);
+      await sectionInstance.setup();
+      this.debugLog(`[Setup finish] Section ${sectionId} installed for user ${ctx.user.username}`);
     }
 
     // Run up method

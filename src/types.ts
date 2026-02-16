@@ -1,4 +1,4 @@
-import { Telegraf, Context } from 'telegraf';
+import { Telegraf } from 'telegraf';
 import { Section } from './illumination/Section';
 import { UserStore } from './user/UserStore';
 import { Telegraf2byteContext } from './illumination/Telegraf2byteContext';
@@ -128,6 +128,12 @@ export interface UserAwaitingReply {
   type?: any;
 }
 
+export type RunSectionRouteTrigger = {
+  params?: Record<string, any>;
+  name: 'cbBeforeRunMethod' | 'cbAfterRunMethod' | undefined;
+  cb: (sectionInstance: Section) => void;
+};
+
 export interface RunSectionRouteParams {
   section: string | null;
   method: string | null;
@@ -136,6 +142,7 @@ export interface RunSectionRouteParams {
   runAsCallbackQuery: boolean;
   actionPath: string | null;
   hearsKey: string | null;
+  triggers: RunSectionRouteTrigger[];
 }
 
 export type SectionEnabledList = string[]

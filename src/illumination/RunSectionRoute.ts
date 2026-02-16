@@ -1,4 +1,4 @@
-import { RunSectionRouteParams } from '../types';
+import type { RunSectionRouteParams, RunSectionRouteTrigger } from '../types';
 
 export class RunSectionRoute {
   private runParams: RunSectionRouteParams = {
@@ -9,6 +9,7 @@ export class RunSectionRoute {
     runAsCallbackQuery: false,
     actionPath: null,
     hearsKey: null,
+    triggers: [],
   };
 
   constructor() {}
@@ -57,6 +58,19 @@ export class RunSectionRoute {
     return this;
   }
 
+  trigger(trigger: RunSectionRouteTrigger): this {
+    this.runParams.triggers.push(trigger);
+    return this;
+  }
+
+  hasTriggers(): boolean {
+    return this.runParams.triggers.length > 0;
+  }
+
+  getTriggers(): RunSectionRouteTrigger[] {
+    return this.runParams.triggers;
+  }
+  
   getMethod(): string | null {
     return this.runParams.method;
   }
