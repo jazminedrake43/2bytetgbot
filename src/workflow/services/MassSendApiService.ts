@@ -36,9 +36,9 @@ export class MassSendApiService extends ApiService<MassSendApiParams> {
           if (receivedData && typeof receivedData == "object") {
             userIds = receivedData?.userIds || [];
             message = receivedData?.message || "Hello from MassSendApiService";
+          
+            this.sendMassMessage(userIds, message, receivedData.extra);
           }
-
-          this.sendMassMessage(userIds, message, receivedData.extra);
 
           return Response.json({ status: 200, body: "Mass message sending initiated." });
         },
