@@ -21,6 +21,7 @@ import {
 import { nameToCapitalize } from "./utils";
 import { ApiServiceManager } from "./ApiServiceManager";
 import { message } from "telegraf/filters";
+import { ApiService } from "./ApiService";
 
 export class App {
   private config: AppConfig = {
@@ -43,6 +44,7 @@ export class App {
     terminateSigTerm: true,
     keepSectionInstances: false,
     botCwd: process.cwd(),
+    services: [],
   };
 
   public bot!: Telegraf<Telegraf2byteContext>;
@@ -185,6 +187,11 @@ export class App {
 
     botCwd(cwdPath: string): this {
       this.app.config.botCwd = cwdPath;
+      return this;
+    }
+
+    services(services: ApiService[]): this {
+      this.app.config.services = services;
       return this;
     }
 
@@ -438,7 +445,10 @@ export class App {
           }
         });
       } else {
-        this.debugLog("Message input already handled by awaitingInput or awaitingInputPromise. stateAfterValidatedUserResponse:", ctx.userSession.stateAfterValidatedUserResponse);
+        this.debugLog(
+          "Message input already handled by awaitingInput or awaitingInputPromise. stateAfterValidatedUserResponse:",
+          ctx.userSession.stateAfterValidatedUserResponse
+        );
       }
 
       delete ctx.userSession.stateAfterValidatedUserResponse; // Clear the state after handling the message
@@ -462,7 +472,7 @@ export class App {
       // Get the largest photo (the last one in the array is usually the largest)
       const largestPhoto = photo[photo.length - 1];
       await this.handleUserInput(ctx, largestPhoto, "photo");
-      
+
       delete ctx.userSession.stateAfterValidatedUserResponse; // Clear the state after handling the message
     });
   }
@@ -470,39 +480,38 @@ export class App {
   private async registerServices() {
     this.apiServiceManager = ApiServiceManager.init(this);
 
-    const registerServices = async (pathDirectory: string) => {
-      try {
-        await this.apiServiceManager.loadServicesFromDirectory(pathDirectory);
-      } catch (error) {
-        this.debugLog("Error loading services:", error);
-        throw error;
-      }
+    // Register services from config
+    this.debugLog(
+      "Registering services from config:",
+      this.config.services.map((service) => service.constructor.name)
+    );
 
-      this.debugLog(
-        "Registered API services:%s in dir: %s",
-        Array.from(this.apiServiceManager.getAll().keys()),
-        pathDirectory
-      );
+    this.config.services.forEach((service) => {
+      this.debugLog(`Registering service: ${service.constructor.name}`);
+      this.apiServiceManager.registerService(service.name, service.setApp(this));
+      this.debugLog(`Service ${service.constructor.name} registered`);
+    });
 
-      for (const [name, service] of this.apiServiceManager.getAll()) {
-        await service.setup();
-        this.debugLog(`Service ${name} setup completed`);
-        await service.run();
-        this.debugLog(`Service ${name} run completed`);
-      }
-    };
+    try {
+      await this.apiServiceManager.setupAllServices();
+    } catch (error) {
+      this.debugLog("Error setting up services:", error);
+      throw error;
+    }
 
-    // Register services from bot directory
-    await registerServices(this.config.botCwd + "/workflow/services");
-    // Register services from framework directory
-    await registerServices(path.resolve(__dirname, "../workflow/services"));
+    try {
+      await this.apiServiceManager.runAllServices();
+    } catch (error) {
+      this.debugLog("Error running services:", error);
+      throw error;
+    }
   }
 
   private async unregisterServices() {
     this.apiServiceManager = ApiServiceManager.init(this);
 
     try {
-      this.apiServiceManager.unsetupAllServices();
+      await this.apiServiceManager.unsetupAllServices();
     } catch (error) {
       this.debugLog("Error unsetting up services:", error);
       throw error;
@@ -923,7 +932,7 @@ export class App {
     if (sectionRoute.hasTriggers()) {
       this.debugLog("Section route has triggers, executing them before running method:", sectionId);
       sectionRoute.getTriggers().forEach((trigger) => {
-        if (trigger.name === 'cbBeforeRunMethod') {
+        if (trigger.name === "cbBeforeRunMethod") {
           this.debugLog(`Executing cbBeforeRunMethod trigger for section ${sectionId}`);
           this.debugLog("Trigger details:", trigger);
 

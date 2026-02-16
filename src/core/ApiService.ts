@@ -1,10 +1,13 @@
 import { App } from "./App";
 
-export abstract class ApiService {
+export class ApiService<T = any> {
+
+    public name: string = "ApiService";
+
+    protected app!: App;
 
     constructor(
-        protected app: App,
-        public name: string
+        public params: T = {} as T
     ) {}
 
     async setup(): Promise<void> {
@@ -17,5 +20,10 @@ export abstract class ApiService {
 
     async run(): Promise<void> {
         // Implement your API logic here
+    }
+
+    public setApp(app: App): this {
+        this.app = app;
+        return this;
     }
 }

@@ -3,6 +3,7 @@ import { Section } from './illumination/Section';
 import { UserStore } from './user/UserStore';
 import { Telegraf2byteContext } from './illumination/Telegraf2byteContext';
 import { RunSectionRoute } from './illumination/RunSectionRoute';
+import { ApiService } from './core/ApiService';
 
 export interface AppConfig {
   accessPublic: boolean;
@@ -24,6 +25,7 @@ export interface AppConfig {
   terminateSigTerm: boolean;
   keepSectionInstances: boolean;
   botCwd: string;
+  services: ApiService[];
 }
 
 export interface SectionOptions {

@@ -2,6 +2,7 @@
 export { App } from './core/App';
 export { ApiService } from './core/ApiService';
 export { ApiServiceManager } from './core/ApiServiceManager';
+export { MassSendApiService } from './workflow/services/MassSendApiService';
 export { BotArtisan } from './core/BotArtisan';
 export { BotMigration } from './core/BotMigration';
 export { BotSeeder } from './core/BotSeeder';

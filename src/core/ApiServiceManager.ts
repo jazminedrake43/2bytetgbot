@@ -51,13 +51,29 @@ export class ApiServiceManager {
     }
   }
 
+  public async runAllServices(): Promise<void> {
+    for (const [name, service] of this.services) {
+      this.app.debugLog(`Running API service: ${name}`);
+      await service.run();
+      this.app.debugLog(`API service run completed: ${name}`);
+    }
+  }
+
   public getAll(): Map<string, ApiService> {
     return this.services;
   }
 
+  public async setupAllServices(): Promise<void> {
+    for (const [name, service] of this.services) {
+      this.app.debugLog(`Setting up API service: ${name}`);
+      await this.setupService(name);
+      this.app.debugLog(`API service setup completed: ${name}`);
+    }
+  }
+
   public async unsetupAllServices(): Promise<void> {
     for (const [name, service] of this.services) {
-      await service.unsetup();
+      await this.unsetupService(name);
     }
   }
 }
