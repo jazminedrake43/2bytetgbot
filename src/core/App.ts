@@ -281,7 +281,7 @@ export class App {
       }
 
       // Check access by username and register user if not exists
-      if (!this.config.userStorage.exists(tgUsername)) {
+      if (!this.config.userStorage.exists(tgUsername) && !this.rememberUser(tgUsername)) {
         const isAuthByUsername = !this.config.accessPublic && !accessKey;
 
         // check access by username for private bots
@@ -295,6 +295,7 @@ export class App {
             checkAccess &&
             checkAccess.every((name) => name.toLowerCase() !== requestUsername.toLowerCase())
           ) {
+            this.debugLog("Username access denied:", requestUsername);
             return ctx.reply("Access denied. Your username is not in the access list.");
           }
           this.debugLog("Username access granted.");
@@ -1029,6 +1030,32 @@ export class App {
   }
 
   /**
+   * Remembers a user in storage by their Telegram username. If the user does not exist in storage, it attempts to fetch the user from the database and add them to storage. This is useful for ensuring that the storage has the latest user data from the database, especially in cases where user information might have been updated.
+   * @param tgUsername Telegram username of the user to remember. This method checks if the user exists in storage, and if not, tries to fetch it from the database and add to storage. This is useful for cases when user data might be updated in the database and we want to refresh the storage with the latest data.
+   * @returns A boolean indicating whether the user was successfully remembered (true) or not (false).
+   */
+  async rememberUser(tgUsername: string): Promise<boolean> {
+    if (this.config.userStorage && !this.config.userStorage.exists(tgUsername)) {
+      this.debugLog("Warning: Username not found in storage:", tgUsername);
+      this.debugLog("Trying getting to database:", tgUsername);
+      
+      // Try to get user from database and add to storage
+      UserModel.resolveDb();
+      const userFromDb = UserModel.findByUsername(tgUsername);
+      
+      if (userFromDb) {
+        this.config.userStorage.add(tgUsername, userFromDb);
+        this.debugLog("Success: User found in database and added to storage:", tgUsername);
+        this.debugLog('Success: Remembered user "' + tgUsername + '"');
+        return true;
+      } else {
+        this.debugLog("Warning: User not found in database:", tgUsername);
+      }
+    }
+    return false;
+  }
+
+  /**
    * Runs a task with bidirectional communication support
    * @param ctx Telegram context
    * @param task Function that performs the task with message handlers
@@ -1236,9 +1263,71 @@ export class App {
   }
 
   debugLog(...args: any[]): void {
-    if (this.config.debug) {
-      console.log(...args);
-    }
+    if (!this.config.debug) return;
+
+    // Color palette
+    const colors = {
+      reset: "\x1b[0m",
+      bright: "\x1b[1m",
+      dim: "\x1b[2m",
+      underscore: "\x1b[4m",
+      fg: {
+        red: "\x1b[31m",
+        green: "\x1b[32m",
+        yellow: "\x1b[33m",
+        blue: "\x1b[34m",
+        magenta: "\x1b[35m",
+        cyan: "\x1b[36m",
+        white: "\x1b[37m",
+      },
+      bg: {
+        red: "\x1b[41m",
+        green: "\x1b[42m",
+        yellow: "\x1b[43m",
+        blue: "\x1b[44m",
+        magenta: "\x1b[45m",
+        cyan: "\x1b[46m",
+        white: "\x1b[47m",
+      },
+    };
+
+    // Timestamp
+    const now = new Date();
+    const timestamp = `${colors.dim}${colors.fg.cyan}[${now.toLocaleTimeString()}]${colors.reset}`;
+
+    // Source (App debug)
+    const source = `${colors.bright}${colors.fg.magenta}AppDebug${colors.reset}`;
+
+    // Format args: highlight objects, errors, etc.
+    const formattedArgs = args.map(arg => {
+      if (arg instanceof Error) {
+        return `${colors.fg.red}${arg.stack || arg.message}${colors.reset}`;
+      }
+      if (typeof arg === "object" && arg !== null) {
+        try {
+          return `${colors.fg.yellow}${JSON.stringify(arg, null, 2)}${colors.reset}`;
+        } catch {
+          return `${colors.fg.yellow}[Object]${colors.reset}`;
+        }
+      }
+      if (typeof arg === "string") {
+        // Highlight keywords
+        if (/error|fail|exception/i.test(arg)) {
+          return `${colors.fg.red}${arg}${colors.reset}`;
+        }
+        if (/success|done|complete/i.test(arg)) {
+          return `${colors.fg.green}${arg}${colors.reset}`;
+        }
+        if (/warn|warning/i.test(arg)) {
+          return `${colors.fg.yellow}${arg}${colors.reset}`;
+        }
+        return `${colors.fg.white}${arg}${colors.reset}`;
+      }
+      return String(arg);
+    });
+
+    // Compose and print
+    console.log(`${timestamp} ${source}:`, ...formattedArgs);
   }
 
   get sections(): SectionList {

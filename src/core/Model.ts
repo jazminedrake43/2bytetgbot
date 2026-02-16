@@ -14,7 +14,7 @@ export abstract class Model {
     this.db = database;
   }
 
-  protected static resolveDb(): Database {
+  public static resolveDb(): Database {
     if (globalThis.db) {
       this.db = globalThis.db;
     } else {
