@@ -63,6 +63,10 @@ export class RunSectionRoute {
     return this;
   }
 
+  static for(sectionId: string, methodName: string = 'index'): RunSectionRoute {
+    return new RunSectionRoute().section(sectionId).method(methodName);
+  }
+
   hasTriggers(): boolean {
     return this.runParams.triggers.length > 0;
   }

@@ -74,7 +74,7 @@ export class App {
     }
   > = new Map();
 
-  private messageHandlers: any[] = [];
+  private messageHandlers: RunSectionRoute[] | CallableFunction<this>[] = [];
 
   constructor() {
     this.middlewares.push(this.mainMiddleware.bind(this));
@@ -162,13 +162,12 @@ export class App {
       return this;
     }
 
-    messageHandlers(handlers: any[]): this {
+    messageHandlers(handlers: RunSectionRoute[] | CallableFunction<this>[]): this {
       this.app.messageHandlers = handlers;
       return this;
     }
 
     /**
-     *
      * @param keep Whether to keep section instances in memory after they are run.
      * If true, sections will not be reloaded on each request, improving performance for frequently accessed sections.
      * If false, sections will be reloaded each time they are accessed, ensuring the latest version is used.
@@ -433,16 +432,46 @@ export class App {
         !ctx.userSession.stateAfterValidatedUserResponse
       ) {
         this.messageHandlers.forEach(async (handler: any) => {
+          if (ctx.caught) {
+            this.debugLog("Message already caught by another handler, skipping remaining handlers.");
+            return;
+          }
+
+          const isHandlerRunSectionRoute = handler instanceof RunSectionRoute;
+
+          if (isHandlerRunSectionRoute) {
+            this.debugLog("Checking message handler section route:", handler);
+            await this.runSection(ctx, handler, {
+              cbBeforeRunMethod: async (sectionInstance: Section) => {
+                sectionInstance.runForMessageHandler = true;
+              },
+            });
+            if (ctx.caught) {
+              this.debugLog("Message handler route caught the message, skipping remaining handlers.");
+              return;
+            }
+          }
+
           const handlerIsClass =
             typeof handler === "function" && /^\s*class\s+/.test(handler.toString());
           const nameHandler = handlerIsClass
             ? handler.name
             : handler.constructor?.name || "unknown";
 
-          this.debugLog("Handling message with handler class:", nameHandler);
-
-          if (handlerIsClass) {
+          if (handlerIsClass && !ctx.caught) {
+            this.debugLog(`Running message handler class ${nameHandler} for user ${ctx.user.username}`);
             await new handler(this).handle(ctx);
+            if (ctx.caught) {
+              this.debugLog("Message handler class caught the message, skipping remaining handlers.");
+              return;
+            }
+          } else if (!handlerIsClass && typeof handler === "function" && !ctx.caught) {
+            this.debugLog(`Running message handler function ${nameHandler} for user ${ctx.user.username}`);
+            await handler(ctx);
+            if (ctx.caught) {
+              this.debugLog("Message handler function caught the message, skipping remaining handlers.");
+              return;
+            }
           }
         });
       } else {

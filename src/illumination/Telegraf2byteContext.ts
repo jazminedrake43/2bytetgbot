@@ -11,6 +11,7 @@ export interface Telegraf2byteContext extends Context, ITelegraf2byteContextExtr
   user: UserModel;
   userStorage: UserStore;
   userSession: UserSession;
+  caught: boolean;
   // msgId?: number;
 }
 

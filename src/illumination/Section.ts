@@ -15,6 +15,7 @@ export class Section {
   static actionRoutes: { [key: string]: string };
   public sectionId: string = "BaseSection";
   public route: RunSectionRoute;
+  public runForMessageHandler: boolean = false;
   protected ctx: Telegraf2byteContext;
   protected bot: Telegraf<Telegraf2byteContext>;
   protected app: App;
