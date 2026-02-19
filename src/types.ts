@@ -41,7 +41,7 @@ export interface RunnedSection {
 }
 
 export interface UserAttributes {
-  id?: number;
+  id: number;
   user_refid?: number;
   tg_id: number;
   tg_username: string;

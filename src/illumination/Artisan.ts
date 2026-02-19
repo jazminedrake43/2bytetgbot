@@ -33,57 +33,28 @@ export class Artisan {
     // Создаем файл секции
     fs.writeFileSync(sectionPath, template);
     console.log(`✅ Created section ${sectionName} at ${sectionPath}`);
+    console.log('To enable the section, add key  it to the sections array in ' + process.cwd() + '/sectionList.ts');
   }
 
   /**
    * Форматирует имя секции (первая буква заглавная, остальные строчные)
    */
   private formatSectionName(name: string): string {
-    return name.charAt(0).toUpperCase() + name.slice(1).toLowerCase();
+    return name.charAt(0).toUpperCase() + name.slice(1);
   }
 
   /**
    * Возвращает шаблон для новой секции
    */
   private getSectionTemplate(name: string): string {
-    return `import { Section } from "@2byte/tgbot-framework";
-import { SectionOptions } from "@2byte/tgbot-framework";
-import { InlineKeyboard } from "@2byte/tgbot-framework";
+    const filePath = path.join(__dirname, '../../templates', 'TemplateSection.ts');
+    let template = fs.readFileSync(filePath, 'utf-8');
+    const nameCamelCase = name.charAt(0).toLowerCase() + name.slice(1);
 
-export default class ${name}Section extends Section {
-  static command = "${name.toLowerCase()}";
-  static description = "${name} section";
-  static actionRoutes = {
-    "${name.toLowerCase()}.index": "index",
-  };
-  
-  public sectionId = "${name.toLowerCase()}";
-  private mainInlineKeyboard: InlineKeyboard;
-
-  constructor(options: SectionOptions) {
-    super(options);
-
-    this.mainInlineKeyboard = this.makeInlineKeyboard([
-      [this.makeInlineButton("🏠 На главную", "home.index")],
-    ]);
-  }
-
-  public async up(): Promise<void> {}
-  public async down(): Promise<void> {}
-  public async setup(): Promise<void> {}
-  public async unsetup(): Promise<void> {}
-
-  async index() {
-    const message = \`
-      👋 Welcome to ${name} Section
-    \`;
-
-    await this.message(message)
-      .inlineKeyboard(this.mainInlineKeyboard)
-      .send();
-  }
-}
-`;
+    template = template.replace(/\$\{name\}/g, nameCamelCase);
+    template = template.replace(/\$\{commandName\}/g, name.toLowerCase());
+    template = template.replace(/TemplateSection/g, `${name}Section`);
+    return template;
   }
 
   /**

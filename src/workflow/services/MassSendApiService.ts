@@ -31,11 +31,10 @@ export class MassSendApiService extends ApiService<MassSendApiParams> {
           this.app.debugLog("Received data for mass message:", receivedData);
 
           let userIds: number[] = [];
-          let message: string = "Hello from MassSendApiService";
 
-          if (receivedData && typeof receivedData == "object") {
+          if (receivedData && typeof receivedData == "object" && receivedData.message) {
             userIds = receivedData?.userIds || [];
-            message = receivedData?.message || "Hello from MassSendApiService";
+            const message = receivedData?.message;
           
             this.sendMassMessage(userIds, message, receivedData.extra);
           }

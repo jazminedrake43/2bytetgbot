@@ -47,8 +47,16 @@ export class UserModel extends Model {
     return this.attributes;
   }
 
-  get id(): number | undefined {
+  get id(): number {
     return this.attributes.id;
+  }
+
+  get tgUsername(): string {
+    return this.attributes.tg_username;
+  }
+
+  get tgName(): string {
+    return this.attributes.tg_first_name + (this.attributes.tg_last_name ? " " + this.attributes.tg_last_name : "");
   }
 
   get lastMessageIds(): number[] {
@@ -153,6 +161,7 @@ export class UserModel extends Model {
     
     const now = new Date().toISOString();
     return UserModel.make({
+      id: 0,
       tg_id: 0,
       tg_username: tgUsername,
       tg_first_name: tgUsername,
@@ -216,6 +225,10 @@ export class UserModel extends Model {
 
   get role(): 'user' | 'admin' {
     return this.attributes.role;
+  }
+
+  get roleIsAdmin(): boolean {
+    return this.attributes.role === 'admin';
   }
 
   get language(): string {
