@@ -202,7 +202,7 @@ export default class Message2byte {
       if (message) {
         if ("media_group_id" in message || "caption" in message) {
           const editMessageCaption = this.editMessageCaption(this.messageValue, this.messageExtra);
-
+          
           if (editMessageCaption && "message_id" in editMessageCaption) {
             this.messageId = editMessageCaption.message_id as number;
           }

@@ -38,6 +38,16 @@ export class InlineKeyboard {
     return this;
   }
 
+  appendArray(rows: any[][]): InlineKeyboard {
+    rows.forEach(row => this.append(row));
+    return this;
+  }
+
+  prependArray(rows: any[][]): InlineKeyboard {
+    rows.forEach(row => this.prepend(row));
+    return this;
+  }
+
   prepend(...row: any[]): InlineKeyboard {
     if (!Array.isArray(row)) {
       this.keyboard.unshift([row]);

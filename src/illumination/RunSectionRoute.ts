@@ -74,6 +74,10 @@ export class RunSectionRoute {
   getTriggers(): RunSectionRouteTrigger[] {
     return this.runParams.triggers;
   }
+
+  hasCallbackParams(): boolean {
+    return this.runParams.callbackParams && Array.from(this.runParams.callbackParams).length > 0;
+  }
   
   getMethod(): string | null {
     return this.runParams.method;

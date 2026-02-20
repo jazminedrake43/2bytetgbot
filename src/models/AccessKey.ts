@@ -3,9 +3,9 @@ import crypto from "crypto";
 import { UserModel } from "../user/UserModel";
 
 export interface AccessKeyData {
-  id?: number;
+  id: number;
   user_id: number;
-  key?: string;
+  key: string;
   used?: number;
   used_user_id?: number | null;
   created_at?: string;
@@ -41,31 +41,31 @@ export class AccessKey extends Model {
     return key;
   }
 
-  static async findByKey(key: string): Promise<AccessKeyData | null> {
+  static findByKey(key: string): AccessKeyData | null {
     return this.queryOne(`SELECT * FROM ${this.tableName} WHERE key = ?`, [key]);
   }
 
-  static async findById(id: number): Promise<AccessKeyData | null> {
+  static findById(id: number): AccessKeyData | null {
     return this.queryOne(`SELECT * FROM ${this.tableName} WHERE id = ?`, [id]);
   }
 
-  static markUsed(key: string, usedUserId?: number): Promise<void> {
+  static markUsed(key: string, usedUserId?: number): void {
     this.execute(
       `UPDATE ${this.tableName} SET used = 1, used_user_id = ?, created_at = created_at WHERE key = ?`,
       [usedUserId || null, key]
     );
   }
 
-  static async revoke(key: string): Promise<void> {
-    await this.execute(`DELETE FROM ${this.tableName} WHERE key = ?`, [key]);
+  static revoke(key: string): void {
+    this.execute(`DELETE FROM ${this.tableName} WHERE key = ?`, [key]);
   }
 
-  static async getAll(limit = 100): Promise<AccessKeyData[]> {
+  static getAll(limit = 100): AccessKeyData[] {
     return this.query(`SELECT * FROM ${this.tableName} ORDER BY created_at DESC LIMIT ?`, [limit]);
   }
 
   /** Get all access keys for a given user */
-  static async findByUser(userId: number, limit = 100): Promise<AccessKeyData[]> {
+  static findByUser(userId: number, limit = 100): AccessKeyData[] {
     return this.query(
       `SELECT * FROM ${this.tableName} WHERE user_id = ? ORDER BY created_at DESC LIMIT ?`,
       [userId, limit]
@@ -73,8 +73,19 @@ export class AccessKey extends Model {
   }
 
   /** Return the owner `UserModel` for a given access entry or null */
-  static async getUserByEntry(entry: AccessKeyData): Promise<any | null> {
-    const userData = await this.queryOne(`SELECT * FROM users WHERE id = ?`, [entry.user_id]);
+  static getUserByEntry(entry: AccessKeyData): any | null {
+    const userData = this.queryOne(`SELECT * FROM users WHERE id = ?`, [entry.user_id]);
+    if (!userData) return null;
+    try {
+      return UserModel.make(userData);
+    } catch (e) {
+      return userData;
+    }
+  }
+
+  static getUsedUserByEntry(entry: AccessKeyData): any | null {
+    if (!entry.used_user_id) return null;
+    const userData = this.queryOne(`SELECT * FROM users WHERE id = ?`, [entry.used_user_id]);
     if (!userData) return null;
     try {
       return UserModel.make(userData);
@@ -84,8 +95,8 @@ export class AccessKey extends Model {
   }
 
   /** Find owner by key string */
-  static async getUserByKey(key: string): Promise<any | null> {
-    const entry = await this.findByKey(key);
+  static getUserByKey(key: string): any | null {
+    const entry = this.findByKey(key);
     if (!entry) return null;
     return this.getUserByEntry(entry as AccessKeyData);
   }

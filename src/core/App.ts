@@ -279,12 +279,7 @@ export class App {
             ? startPayload.split("key=")[1] || null
             : null;
       }
-      this.debugLog(
-        "exists storage",
-        this.config.userStorage.exists(tgUsername),
-        "remeber:",
-        this.rememberUser(tgUsername)
-      );
+      
       // Check access by username and register user if not exists
       if (!this.config.userStorage.exists(tgUsername) && !this.rememberUser(tgUsername)) {
         const isAuthByUsername = !this.config.accessPublic && !accessKey;
@@ -907,7 +902,7 @@ export class App {
       }
       sectionClass = this.sectionClasses.get(sectionId) as typeof Section;
     }
-    this.debugLog("Using section class:", sectionClass.constructor.name);
+    this.debugLog("Using section class:", sectionClass.name);
 
     let sectionInstance: Section | undefined;
 
@@ -921,6 +916,10 @@ export class App {
     };
 
     const createRunnedSection = (instance: Section, route: RunSectionRoute): RunnedSection => {
+      if (route.hasCallbackParams()) {
+        instance.setCallbackParams(route.getCallbackParams());
+        this.debugLog("Set callback params for section instance:", route.getCallbackParams());
+      }
       return {
         instance,
         route,

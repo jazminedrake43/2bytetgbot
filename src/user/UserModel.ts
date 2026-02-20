@@ -232,6 +232,15 @@ export class UserModel extends Model {
     return undefined;
   }
 
+  static delete(id: number): boolean {
+    if (this.db) {
+      const result = this.db.run(`DELETE FROM ${this.tableName} WHERE id = ?`, [id]);
+      return result.changes > 0;
+    } else {
+      throw new Error("Database connection is not set.");
+    }
+  }
+
   get username(): string {
     return this.attributes.tg_username;
   }

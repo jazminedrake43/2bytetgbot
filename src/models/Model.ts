@@ -29,13 +29,13 @@ export abstract class Model {
     return this.db.transaction(callback)();
   }
 
-  public static async paginate(paginateParams: ModelPaginateParams): Promise<PaginateResult> {
+  public static paginate(paginateParams: ModelPaginateParams): PaginateResult {
     const { page, route, routeParams, limit, whereSql, whereParams } = paginateParams;
     const offset = (page - 1) * limit;
     const sql = `SELECT * FROM ${this.tableName} ${whereSql} LIMIT ${offset}, ${limit}`;
 
-    const result = await this.query(sql, whereParams);
-    const queryTotal = await this.queryOne(`SELECT COUNT(*) as count FROM ${this.tableName} ${whereSql}`, whereParams);
+    const result = this.query(sql, whereParams);
+    const queryTotal = this.queryOne(`SELECT COUNT(*) as count FROM ${this.tableName} ${whereSql}`, whereParams);
     const total = queryTotal ? queryTotal.count : 0;
     const totalPages = Math.ceil(total / limit);
     const hasPreviousPage = page > 1;

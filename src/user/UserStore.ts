@@ -116,4 +116,23 @@ export class UserStore {
       });
     }, 60 * 1000);
   }
+
+  deleteByUsername(tgUsername: string): boolean {
+    const user = this.usersMap.get(tgUsername);
+    if (user) {
+      this.usersSession.delete(user);
+      return this.usersMap.delete(tgUsername);
+    }
+    return false;
+  }
+
+  deleteById(userId: number): boolean {
+    const userEntry = Array.from(this.usersMap).find(([_, user]) => user.id === userId);
+    if (userEntry) {
+      const [tgUsername, user] = userEntry;
+      this.usersSession.delete(user);
+      return this.usersMap.delete(tgUsername);
+    }
+    return false;
+  }
 }
