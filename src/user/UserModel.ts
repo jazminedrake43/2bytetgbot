@@ -140,6 +140,20 @@ export class UserModel extends Model {
     throw new Error("Error not found user params:" + JSON.stringify(params));
   }
 
+  static findById(id: number): UserModel | undefined {
+    if (this.db) {
+      const userData = this.queryOne(`SELECT * FROM ${this.tableName} WHERE id = ?`, [id]);
+      
+      if (userData) {
+        return UserModel.make(userData);
+      }
+    } else {
+      throw new Error("Database connection is not set.");
+    }
+
+    return undefined;
+  }
+  
   static findByUsername(tgUsername: string): UserModel | undefined {
     if (this.db) {
       const userData = this.queryOne(`SELECT * FROM ${this.tableName} WHERE tg_username = ?`, [tgUsername]);
@@ -199,6 +213,23 @@ export class UserModel extends Model {
 
       throw error;
     }
+  }
+
+  static update(id: number, attributes: Partial<UserAttributes>): UserModel | undefined {
+    if (this.db) {
+      const user = this.findById(id);
+      if (user) {
+        Object.assign(user.attributes, attributes);
+        const keys = Object.keys(attributes);
+        const values = Object.values(attributes);
+        const setString = keys.map(key => `${key} = ?`).join(', ');
+        this.db.run(`UPDATE ${this.tableName} SET ${setString} WHERE id = ?`, [...values, id]);
+        return user;
+      }
+    } else {
+      throw new Error("Database connection is not set.");
+    }
+    return undefined;
   }
 
   get username(): string {

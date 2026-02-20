@@ -8,6 +8,7 @@ import {
 import { Section } from "../illumination/Section";
 import { RunSectionRoute } from "../illumination/RunSectionRoute";
 import { UserModel } from "../user/UserModel";
+import { AccessKey } from "../models/AccessKey";
 import { UserStore } from "../user/UserStore";
 import {
   AppConfig,
@@ -278,11 +279,21 @@ export class App {
             ? startPayload.split("key=")[1] || null
             : null;
       }
-
+      this.debugLog(
+        "exists storage",
+        this.config.userStorage.exists(tgUsername),
+        "remeber:",
+        this.rememberUser(tgUsername)
+      );
       // Check access by username and register user if not exists
       if (!this.config.userStorage.exists(tgUsername) && !this.rememberUser(tgUsername)) {
         const isAuthByUsername = !this.config.accessPublic && !accessKey;
-
+        this.debugLog(
+          "Access control check. isAuthByUsername:",
+          isAuthByUsername,
+          "accessKey in start payload:",
+          accessKey
+        );
         // check access by username for private bots
         if (isAuthByUsername) {
           const requestUsername = this.getTgUsername(ctx);
@@ -306,9 +317,14 @@ export class App {
           const accessKeys =
             this.config.envConfig.BOT_ACCESS_KEYS &&
             this.config.envConfig.BOT_ACCESS_KEYS.split(",").map((key) => key.trim());
+
+          AccessKey.setDatabase(globalThis.db);
+          const checkTempKey = AccessKey.checkKeyValid(accessKey);
+          
           if (
             accessKeys &&
-            accessKeys.every((key) => key.toLowerCase() !== accessKey?.toLowerCase())
+            accessKeys.every((key) => key.toLowerCase() !== accessKey?.toLowerCase()) &&
+            !checkTempKey
           ) {
             return ctx.reply("Access denied. Your access key is not valid.");
           }
@@ -321,15 +337,18 @@ export class App {
 
         const userRefIdFromStart = startPayload ? parseInt(startPayload) : 0;
 
-        await this.registerUser({
-          user_refid: userRefIdFromStart,
-          tg_id: ctx.from.id,
-          tg_username: tgUsername,
-          tg_first_name: ctx.from.first_name || tgUsername,
-          tg_last_name: ctx.from.last_name || "",
-          role: "user",
-          language: ctx.from.language_code || "en",
-        });
+        await this.registerUser(
+          {
+            user_refid: userRefIdFromStart,
+            tg_id: ctx.from.id,
+            tg_username: tgUsername,
+            tg_first_name: ctx.from.first_name || tgUsername,
+            tg_last_name: ctx.from.last_name || "",
+            role: "user",
+            language: ctx.from.language_code || "en",
+          },
+          accessKey || undefined
+        );
       }
 
       ctx.user = this.config.userStorage.find(tgUsername);
@@ -433,7 +452,9 @@ export class App {
       ) {
         this.messageHandlers.forEach(async (handler: any) => {
           if (ctx.caught) {
-            this.debugLog("Message already caught by another handler, skipping remaining handlers.");
+            this.debugLog(
+              "Message already caught by another handler, skipping remaining handlers."
+            );
             return;
           }
 
@@ -447,7 +468,9 @@ export class App {
               },
             });
             if (ctx.caught) {
-              this.debugLog("Message handler route caught the message, skipping remaining handlers.");
+              this.debugLog(
+                "Message handler route caught the message, skipping remaining handlers."
+              );
               return;
             }
           }
@@ -459,17 +482,25 @@ export class App {
             : handler.constructor?.name || "unknown";
 
           if (handlerIsClass && !ctx.caught) {
-            this.debugLog(`Running message handler class ${nameHandler} for user ${ctx.user.username}`);
+            this.debugLog(
+              `Running message handler class ${nameHandler} for user ${ctx.user.username}`
+            );
             await new handler(this).handle(ctx);
             if (ctx.caught) {
-              this.debugLog("Message handler class caught the message, skipping remaining handlers.");
+              this.debugLog(
+                "Message handler class caught the message, skipping remaining handlers."
+              );
               return;
             }
           } else if (!handlerIsClass && typeof handler === "function" && !ctx.caught) {
-            this.debugLog(`Running message handler function ${nameHandler} for user ${ctx.user.username}`);
+            this.debugLog(
+              `Running message handler function ${nameHandler} for user ${ctx.user.username}`
+            );
             await handler(ctx);
             if (ctx.caught) {
-              this.debugLog("Message handler function caught the message, skipping remaining handlers.");
+              this.debugLog(
+                "Message handler function caught the message, skipping remaining handlers."
+              );
               return;
             }
           }
@@ -876,7 +907,7 @@ export class App {
       }
       sectionClass = this.sectionClasses.get(sectionId) as typeof Section;
     }
-    this.debugLog("Using section class:", sectionClass);
+    this.debugLog("Using section class:", sectionClass.constructor.name);
 
     let sectionInstance: Section | undefined;
 
@@ -1042,10 +1073,13 @@ export class App {
     return section;
   }
 
-  async registerUser(data: UserRegistrationData): Promise<UserModel | null> {
+  async registerUser(data: UserRegistrationData, accessKey?: string): Promise<UserModel | null> {
     try {
       const user = await UserModel.register(data);
 
+      if (accessKey) {
+        AccessKey.markUsed(accessKey, user.id);
+      }
       if (this.config.userStorage) {
         this.config.userStorage.add(data.tg_username, user);
         this.debugLog("User added to storage:", data.tg_username);
@@ -1063,22 +1097,22 @@ export class App {
    * @param tgUsername Telegram username of the user to remember. This method checks if the user exists in storage, and if not, tries to fetch it from the database and add to storage. This is useful for cases when user data might be updated in the database and we want to refresh the storage with the latest data.
    * @returns A boolean indicating whether the user was successfully remembered (true) or not (false).
    */
-  async rememberUser(tgUsername: string): Promise<boolean> {
+  rememberUser(tgUsername: string): boolean {
     if (this.config.userStorage && !this.config.userStorage.exists(tgUsername)) {
-      this.debugLog("Warning: Username not found in storage:", tgUsername);
-      this.debugLog("Trying getting to database:", tgUsername);
-      
+      this.debugLog("Warning: Remembering, Username not found in storage:", tgUsername);
+      this.debugLog("Remembering, Trying getting to database:", tgUsername);
+
       // Try to get user from database and add to storage
       UserModel.resolveDb();
       const userFromDb = UserModel.findByUsername(tgUsername);
-      
+
       if (userFromDb) {
         this.config.userStorage.add(tgUsername, userFromDb);
         this.debugLog("Success: User found in database and added to storage:", tgUsername);
         this.debugLog('Success: Remembered user "' + tgUsername + '"');
         return true;
       } else {
-        this.debugLog("Warning: User not found in database:", tgUsername);
+        this.debugLog("Warning: Remembering, User not found in database:", tgUsername);
       }
     }
     return false;
@@ -1328,7 +1362,7 @@ export class App {
     const source = `${colors.bright}${colors.fg.magenta}AppDebug${colors.reset}`;
 
     // Format args: highlight objects, errors, etc.
-    const formattedArgs = args.map(arg => {
+    const formattedArgs = args.map((arg) => {
       if (arg instanceof Error) {
         return `${colors.fg.red}${arg.stack || arg.message}${colors.reset}`;
       }

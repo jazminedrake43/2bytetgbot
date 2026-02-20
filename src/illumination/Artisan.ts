@@ -1,11 +1,18 @@
 import fs from 'fs';
 import path from 'path';
+import type { Database } from 'bun:sqlite';
+
+export type ArtisanOptions = {
+  db?: Database;
+};
 
 export class Artisan {
   private basePath: string;
+  private options: ArtisanOptions = {};
 
-  constructor(basePath: string) {
+  constructor(basePath: string, options: ArtisanOptions) {
     this.basePath = basePath;
+    this.options = options;
   }
 
   /**
