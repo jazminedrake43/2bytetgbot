@@ -259,10 +259,12 @@ export class App {
 
   async mainMiddleware() {
     this.bot.use(async (ctx: Telegraf2byteContext, next: () => Promise<void>) => {
-      const tgUsername = this.getTgUsername(ctx);
+      const genTgUsername = () => `unknown_${ctx.from?.id || "user"}`;
+      const tgId = this.getTgId(ctx);
+      const tgUsername = this.getTgUsername(ctx) || genTgUsername();
 
-      if (!tgUsername) {
-        return ctx.reply("Username is not set");
+      if (!tgId) {
+        return ctx.reply("Unable to identify user");
       }
 
       if (!this.config.userStorage) {
@@ -272,6 +274,7 @@ export class App {
       let startPayload: string | null = null;
       let accessKey: string | null = null;
 
+      // If the message starts with /start, we can check for access key in the payload for private bots. The payload can be in format /start key=ACCESS_KEY or /start refid=USER_REF_ID or /start key=ACCESS_KEY refid=USER_REF_ID
       if (ctx?.message?.text?.startsWith("/start")) {
         startPayload = ctx?.message?.text?.split(" ")[1] || null;
         accessKey =
@@ -279,9 +282,13 @@ export class App {
             ? startPayload.split("key=")[1] || null
             : null;
       }
+      // Also check for access key in message text for cases when user sends the access key separately after /start command
+      if (!accessKey && ctx?.message?.text && ctx?.message?.text?.length == 48) {
+        accessKey = ctx.message.text.trim();
+      }
       
-      // Check access by username and register user if not exists
-      if (!this.config.userStorage.exists(tgUsername) && !this.rememberUser(tgUsername)) {
+      // Check access by id and register user if not exists
+      if (!this.config.userStorage.exists(tgId) && !this.rememberUserById(tgId)) {
         const isAuthByUsername = !this.config.accessPublic && !accessKey;
         this.debugLog(
           "Access control check. isAuthByUsername:",
@@ -293,12 +300,12 @@ export class App {
         if (isAuthByUsername) {
           const requestUsername = this.getTgUsername(ctx);
           this.debugLog("Private access mode. Checking username:", requestUsername);
-          const checkAccess =
+          const accessUsernameAllowed =
             this.config.envConfig.ACCESS_USERNAMES &&
             this.config.envConfig.ACCESS_USERNAMES.split(",").map((name) => name.trim());
           if (
-            checkAccess &&
-            checkAccess.every((name) => name.toLowerCase() !== requestUsername.toLowerCase())
+            accessUsernameAllowed &&
+            accessUsernameAllowed.every((name) => name.toLowerCase() !== requestUsername.toLowerCase())
           ) {
             this.debugLog("Username access denied:", requestUsername);
             return ctx.reply("Access denied. Your username is not in the access list.");
@@ -337,7 +344,7 @@ export class App {
             user_refid: userRefIdFromStart,
             tg_id: ctx.from.id,
             tg_username: tgUsername,
-            tg_first_name: ctx.from.first_name || tgUsername,
+            tg_first_name: ctx.from.first_name || "",
             tg_last_name: ctx.from.last_name || "",
             role: "user",
             language: ctx.from.language_code || "en",
@@ -346,15 +353,15 @@ export class App {
         );
       }
 
-      ctx.user = this.config.userStorage.find(tgUsername);
+      ctx.user = this.config.userStorage.find(tgId);
       ctx.userStorage = this.config.userStorage;
       ctx.userSession = this.config.userStorage.findSession(ctx.user);
       Object.assign(ctx, Telegraf2byteContextExtraMethods);
 
-      this.config.userStorage.upActive(tgUsername);
+      this.config.userStorage.upActive(tgId);
 
       if (ctx.msgId) {
-        this.config.userStorage.storeMessageId(tgUsername, ctx.msgId, 10);
+        this.config.userStorage.storeMessageId(tgId, ctx.msgId, 10);
       }
 
       return next();
@@ -1080,8 +1087,8 @@ export class App {
         AccessKey.markUsed(accessKey, user.id);
       }
       if (this.config.userStorage) {
-        this.config.userStorage.add(data.tg_username, user);
-        this.debugLog("User added to storage:", data.tg_username);
+        this.config.userStorage.add(data.tg_id, user);
+        this.debugLog("User added to storage by tgId:", data.tg_id);
       }
 
       return user;
@@ -1092,26 +1099,25 @@ export class App {
   }
 
   /**
-   * Remembers a user in storage by their Telegram username. If the user does not exist in storage, it attempts to fetch the user from the database and add them to storage. This is useful for ensuring that the storage has the latest user data from the database, especially in cases where user information might have been updated.
-   * @param tgUsername Telegram username of the user to remember. This method checks if the user exists in storage, and if not, tries to fetch it from the database and add to storage. This is useful for cases when user data might be updated in the database and we want to refresh the storage with the latest data.
+   * Remembers a user in storage by their Telegram ID. If the user does not exist in storage, it attempts to fetch the user from the database and add them to storage.
+   * @param tgId Telegram user ID of the user to remember.
    * @returns A boolean indicating whether the user was successfully remembered (true) or not (false).
    */
-  rememberUser(tgUsername: string): boolean {
-    if (this.config.userStorage && !this.config.userStorage.exists(tgUsername)) {
-      this.debugLog("Warning: Remembering, Username not found in storage:", tgUsername);
-      this.debugLog("Remembering, Trying getting to database:", tgUsername);
+  rememberUserById(tgId: number): boolean {
+    if (this.config.userStorage && !this.config.userStorage.exists(tgId)) {
+      this.debugLog("Warning: Remembering, tgId not found in storage:", tgId);
+      this.debugLog("Remembering, Trying getting from database:", tgId);
 
       // Try to get user from database and add to storage
       UserModel.resolveDb();
-      const userFromDb = UserModel.findByUsername(tgUsername);
+      const userFromDb = UserModel.findByTgId(tgId);
 
       if (userFromDb) {
-        this.config.userStorage.add(tgUsername, userFromDb);
-        this.debugLog("Success: User found in database and added to storage:", tgUsername);
-        this.debugLog('Success: Remembered user "' + tgUsername + '"');
+        this.config.userStorage.add(tgId, userFromDb);
+        this.debugLog("Success: User found in database and added to storage by tgId:", tgId);
         return true;
       } else {
-        this.debugLog("Warning: Remembering, User not found in database:", tgUsername);
+        this.debugLog("Warning: Remembering, User not found in database for tgId:", tgId);
       }
     }
     return false;

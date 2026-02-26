@@ -131,7 +131,7 @@ export class UserModel extends Model {
       });
     }
 
-    const user = this.findByUsername(params.tg_username);
+    const user = this.findByTgId(params.tg_id);
 
     if (user) {
       return user;
@@ -168,6 +168,20 @@ export class UserModel extends Model {
     return undefined;
   }
 
+  static findByTgId(tgId: number): UserModel | undefined {
+    if (this.db) {
+      const userData = this.queryOne(`SELECT * FROM ${this.tableName} WHERE tg_id = ?`, [tgId]);
+
+      if (userData) {
+        return UserModel.make(userData);
+      }
+    } else {
+      throw new Error("Database connection is not set.");
+    }
+
+    return undefined;
+  }
+
   static async findOnServer(tgUsername: string): Promise<UserModel> {
     // Здесь должен быть запрос к API, но мы оставим это для будущей реализации
     // const user = await api.fetch("user/get/" + tgUsername);
@@ -189,7 +203,7 @@ export class UserModel extends Model {
   async refresh(): Promise<boolean> {
     if (this.userSession) {
       return this.userSession.add(
-        this.attributes.tg_username,
+        this.attributes.tg_id,
         await UserModel.findOnServer(this.attributes.tg_username)
       );
     }
