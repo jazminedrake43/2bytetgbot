@@ -7,13 +7,13 @@ export default class Message2bytePool {
     private message2byte: Message2byte;
     private ctx: Telegraf2byteContext;
     private messageValue: string = "";
-    private section: Section;
+    private section: Section | undefined;
 
-    static init(message2byte: Message2byte, ctx: Telegraf2byteContext, section: Section) {
+    static init(message2byte: Message2byte, ctx: Telegraf2byteContext, section?: Section) {
         return new Message2bytePool(message2byte, ctx, section);
     }
 
-    constructor(message2byte: Message2byte, ctx: Telegraf2byteContext, section: Section) {
+    constructor(message2byte: Message2byte, ctx: Telegraf2byteContext, section?: Section) {
         this.message2byte = message2byte;
         this.message2byte.setNotAnswerCbQuery();
         this.ctx = ctx;
@@ -32,7 +32,7 @@ export default class Message2bytePool {
     
     message(message: string): this {
         this.messageValue = message;
-        if (this.section.route.runIsCallbackQuery) {
+        if (this.section && this.section.route.runIsCallbackQuery) {
             this.message2byte.updateMessage(message);
         } else {
             this.message2byte.message(message);

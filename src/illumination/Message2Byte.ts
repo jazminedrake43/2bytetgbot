@@ -16,14 +16,14 @@ export default class Message2byte {
   private imageCaption: string | null = null;
   private messageId: number | null = null;
   private doAnswerCbQuery: boolean = true;
-  private section: Section;
+  private section: Section | undefined;
 
-  constructor(ctx: Telegraf2byteContext, section: Section) {
+  constructor(ctx: Telegraf2byteContext, section?: Section) {
     this.ctx = ctx;
     this.section = section;
   }
 
-  static init(ctx: Telegraf2byteContext, section: Section) {
+  static init(ctx: Telegraf2byteContext, section?: Section) {
     return new Message2byte(ctx, section);
   }
 
@@ -193,7 +193,7 @@ export default class Message2byte {
   async send() {
     // console.log("Sending message:", this.messageValue, ' Extra:', this.messageExtra, 'IsUpdate:', this.isUpdate);
     if (this.isUpdate) {
-      if (this.section.route.runIsCallbackQuery && this.doAnswerCbQuery) {
+      if (this.section &&this.section.route.runIsCallbackQuery && this.doAnswerCbQuery) {
         await this.ctx.answerCbQuery();
       }
 
