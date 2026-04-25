@@ -27,8 +27,8 @@ export class InitCommand {
 
     console.log(chalk.green('✅ 2byte bot initialized successfully!'));
     console.log(chalk.blue('📋 Next steps:'));
-    console.log('   bun install           # Install dependencies');
-    console.log('   bun run migrate        # Run migrations');
+    console.log('   bun install            # Install dependencies');
+    console.log('   bun run migrate up     # Run migrations');
     console.log('   bun run seed           # Seed database');
     console.log('   bun run dev            # Start bot');
   }
@@ -45,6 +45,8 @@ export class InitCommand {
       '.env.example',
       'database/migrate.ts',
       'database/seed.ts',
+      'workflow/MainMessageHandler.ts',
+      'workflow/MassSends.ts',
     ];
 
     for (const file of essentialFiles) {

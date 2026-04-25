@@ -15,8 +15,6 @@ const requiredEnvVars: (keyof EnvVars)[] = [
   "BOT_HOOK_DOMAIN",
   "BOT_HOOK_PORT",
   "BOT_ACCESS",
-  "ACCESS_USERNAMES",
-  "BOT_ACCESS_KEYS",
   "BOT_APP_API_PORT",
   "TG_APP_ID",
   "TG_APP_HASH",

@@ -1,5 +1,5 @@
 import { Section } from "@2byte/tgbot-framework";
-import { SectionOptions } from "@2byte/tgbot-framework";
+import type { SectionOptions } from "@2byte/tgbot-framework";
 import { InlineKeyboard } from "@2byte/tgbot-framework";
 
 export default class TemplateSection extends Section {

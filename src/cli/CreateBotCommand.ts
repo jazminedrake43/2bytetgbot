@@ -70,7 +70,7 @@ export class CreateBotCommand {
     console.log(chalk.blue('📋 Next steps:'));
     console.log(`   cd ${botName}`);
     console.log(`   ${config.installDeps ? '' : 'bun install'}${config.installDeps ? '' : ' # Install dependencies'}`);
-    console.log('   bun run migrate        # Run migrations');
+    console.log('   bun run migrate up     # Run migrations');
     console.log('   bun run seed           # Seed database');
     console.log('   bun run dev            # Start bot');
   }
