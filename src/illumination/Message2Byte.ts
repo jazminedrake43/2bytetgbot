@@ -193,7 +193,7 @@ export default class Message2byte {
   async send() {
     // console.log("Sending message:", this.messageValue, ' Extra:', this.messageExtra, 'IsUpdate:', this.isUpdate);
     if (this.isUpdate) {
-      if (this.section &&this.section.route.runIsCallbackQuery && this.doAnswerCbQuery) {
+      if (this.section && this.section.route.runIsCallbackQuery && this.doAnswerCbQuery) {
         await this.ctx.answerCbQuery();
       }
 
@@ -218,14 +218,14 @@ export default class Message2byte {
           return editedText;
         }
       } else {
-        // this.messageExtra.message_id = this.messageId;
+        // console.log("No message found in callbackQuery for updateMessage. Sending new message instead.");
 
         try {
           const messageEntity = await this.editMessageText(this.messageValue, this.messageExtra);
 
-          if (typeof messageEntity === "object" && "message_id" in messageEntity) {
-            this.messageId = messageEntity.message_id as number;
-          }
+          // if (typeof messageEntity === "object" && "message_id" in messageEntity) {
+          //   this.messageId = messageEntity.message_id as number;
+          // }
 
           return messageEntity;
         } catch (e) {}

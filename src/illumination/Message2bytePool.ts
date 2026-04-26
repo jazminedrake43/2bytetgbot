@@ -8,6 +8,7 @@ export default class Message2bytePool {
     private ctx: Telegraf2byteContext;
     private messageValue: string = "";
     private section: Section | undefined;
+    public messageId: number | null = null;
 
     static init(message2byte: Message2byte, ctx: Telegraf2byteContext, section?: Section) {
         return new Message2bytePool(message2byte, ctx, section);
@@ -71,10 +72,13 @@ export default class Message2bytePool {
 
         const entity = await this.message2byte.send();
 
-        // if (typeof entity === "object" && entity.message_id) {
-        //     this.messageId = entity.message_id;
-        //     console.log("Pool message sent with ID:", this.messageId);
-        // }
+        if (typeof entity === "object" && entity.message_id) {
+            this.messageId = entity.message_id;
+            if (this.messageId) {
+                this.message2byte.setMessageId(this.messageId);
+            }
+            // console.log("Pool message sent with ID:", this.messageId);
+        }
 
         return entity;
     }
