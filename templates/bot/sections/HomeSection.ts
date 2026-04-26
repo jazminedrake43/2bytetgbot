@@ -1,14 +1,15 @@
-import { Section, SectionOptions, InlineKeyboard } from "@2byte/tgbot-framework";
+import { Section, InlineKeyboard } from "@2byte/tgbot-framework";
+import type { SectionOptions } from "@2byte/tgbot-framework";
 
 export default class HomeSection extends Section {
-  static command = "start";
-  static description = "Example Bot Home section";
-  static actionRoutes = {
+  static override command = "start";
+  static override description = "Example Bot Home section";
+  static override actionRoutes = {
     "home.index": "index",
     "home.help": "help",
   };
 
-  public sectionId = "home";
+  public override sectionId = "home";
   private mainInlineKeyboard: InlineKeyboard;
 
   constructor(options: SectionOptions) {
@@ -17,10 +18,10 @@ export default class HomeSection extends Section {
     this.mainInlineKeyboard = this.makeInlineKeyboard().addFootFixedButtons(this.btnHome);
   }
 
-  public async up(): Promise<void> {}
-  public async down(): Promise<void> {}
-  public async setup(): Promise<void> {}
-  public async unsetup(): Promise<void> {}
+  public override async up(): Promise<void> {}
+  public override async down(): Promise<void> {}
+  public override async setup(): Promise<void> {}
+  public override async unsetup(): Promise<void> {}
 
   async index() {
     const message = `
