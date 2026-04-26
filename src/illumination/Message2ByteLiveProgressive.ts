@@ -1,6 +1,8 @@
 import Message2byte from "./Message2Byte";
 import Message2bytePool from "./Message2bytePool";
 
+export type Message2ByteLiveProgressiveStyle = 'default' | 'matrix' | 'neo' | 'clean';
+
 interface ProgressiveItem {
   id: number;
   text: string;
@@ -18,6 +20,7 @@ export default class Message2ByteLiveProgressive {
   private message2bytePool: Message2bytePool;
   private items: Map<number, ProgressiveItem> = new Map();
   private baseMessage: string = '';
+  private style: Message2ByteLiveProgressiveStyle = 'default';
   private progressBarTimer?: NodeJS.Timeout;
   private progressBarIcons = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"];
   private progressBarIndex = 0;
@@ -38,6 +41,23 @@ export default class Message2ByteLiveProgressive {
   setBaseMessage(message: string): this {
     this.baseMessage = message;
     return this;
+  }
+
+  setStyle(style: Message2ByteLiveProgressiveStyle): this {
+    this.style = style;
+    return this;
+  }
+
+  matrixStyle(): this {
+    return this.setStyle('matrix');
+  }
+
+  neoStyle(): this {
+    return this.setStyle('neo');
+  }
+
+  cleanStyle(): this {
+    return this.setStyle('clean');
   }
 
   /**
@@ -193,33 +213,208 @@ export default class Message2ByteLiveProgressive {
    * Обновляет сообщение с текущими пунктами
    */
   private updateMessage(): void {
+    const message = this.renderMessage();
+    this.message2bytePool.update(message.trim());
+  }
+
+  private renderMessage(): string {
+    if (this.style === 'matrix') {
+      return this.renderMatrixMessage();
+    }
+
+    if (this.style === 'neo') {
+      return this.renderNeoMessage();
+    }
+
+    if (this.style === 'clean') {
+      return this.renderCleanMessage();
+    }
+
+    return this.renderDefaultMessage();
+  }
+
+  private renderDefaultMessage(): string {
     let message = this.baseMessage;
-    
+
     if (this.items.size > 0) {
       message += '\n\n';
-      
-      // Сортируем пункты по ID
-      const sortedItems = Array.from(this.items.values()).sort((a, b) => a.id - b.id);
-      
-      sortedItems.forEach(item => {
+
+      this.getSortedItems().forEach(item => {
         const statusIcon = this.getStatusIcon(item);
         const progressIcon = this.getProgressIcon(item);
-        
-        message += `${statusIcon} ${item.text}${progressIcon}\n`;
 
-        if (item.caption) {
-          if (this.message2byte.messageExtra && this.message2byte.messageExtra.parse_mode === 'html') {
-            message += `   <i>${item.caption}</i>\n`;
-          } else if (this.message2byte.messageExtra && this.message2byte.messageExtra.parse_mode === 'markdown') {
-            message += `   _${item.caption}_\n`;
-          } else {
-            message += `   ${item.caption}\n`;
-          }
+        message += `${statusIcon} ${item.text}${progressIcon}\n`;
+        message += this.renderCaption(item, '   ');
+      });
+    }
+
+    return message;
+  }
+
+  private renderMatrixMessage(): string {
+    const lines: string[] = [];
+    const baseMessage = this.baseMessage.trim();
+
+    if (baseMessage) {
+      lines.push(`[SYS] ${baseMessage}`);
+    }
+
+    if (this.items.size > 0) {
+      lines.push('[SCAN] pipeline engaged');
+      lines.push('');
+
+      this.getSortedItems().forEach(item => {
+        const statusLabel = this.getMatrixStatusLabel(item);
+        const progressIcon = this.getProgressIcon(item);
+        const signal = this.getMatrixSignal(item.id);
+
+        lines.push(`[${statusLabel}] node-${item.id.toString().padStart(2, '0')} :: ${item.text} :: ${signal}${progressIcon}`);
+
+        const caption = this.renderCaption(item, '    > ').trimEnd();
+        if (caption) {
+          lines.push(caption);
         }
       });
     }
 
-    this.message2bytePool.update(message.trim());
+    return lines.join('\n');
+  }
+
+  private getSortedItems(): ProgressiveItem[] {
+    return Array.from(this.items.values()).sort((a, b) => a.id - b.id);
+  }
+
+  private renderCaption(item: ProgressiveItem, prefix: string): string {
+    if (!item.caption) {
+      return '';
+    }
+
+    if (this.message2byte.messageExtra && this.message2byte.messageExtra.parse_mode === 'html') {
+      return `${prefix}<i>${item.caption}</i>\n`;
+    }
+
+    if (this.message2byte.messageExtra && this.message2byte.messageExtra.parse_mode === 'markdown') {
+      return `${prefix}_${item.caption}_\n`;
+    }
+
+    return `${prefix}${item.caption}\n`;
+  }
+
+  private getMatrixStatusLabel(item: ProgressiveItem): string {
+    switch (item.status) {
+      case 'active': return 'EXEC';
+      case 'completed': return 'SYNC';
+      case 'error': return 'FAIL';
+      case 'pending': return 'WAIT';
+      default: return 'WAIT';
+    }
+  }
+
+  private getMatrixSignal(id: number): string {
+    const binary = id.toString(2).padStart(8, '0');
+    return `${binary.slice(0, 4)}.${binary.slice(4)}`;
+  }
+
+  private renderNeoMessage(): string {
+    const lines: string[] = [];
+    const sep = '────────────────────────';
+
+    if (this.baseMessage.trim()) {
+      lines.push(`◈  ${this.baseMessage.trim()}`);
+      lines.push(sep);
+    }
+
+    if (this.items.size > 0) {
+      lines.push('');
+
+      this.getSortedItems().forEach(item => {
+        const icon = this.getNeoStatusIcon(item);
+        const bar = this.getNeoProgressBar(item);
+        const spinner = this.getProgressIcon(item);
+
+        lines.push(`${icon}  ${item.text}   ${bar}${spinner}`);
+
+        if (item.caption) {
+          lines.push(`   ↳ ${item.caption}`);
+        }
+
+        lines.push('');
+      });
+
+      lines.push(sep);
+    }
+
+    return lines.join('\n').trim();
+  }
+
+  private getNeoStatusIcon(item: ProgressiveItem): string {
+    switch (item.status) {
+      case 'pending': return '○';
+      case 'active': return '◎';
+      case 'completed': return '◆';
+      case 'error': return '✖';
+      default: return '○';
+    }
+  }
+
+  private renderCleanMessage(): string {
+    const lines: string[] = [];
+
+    if (this.baseMessage.trim()) {
+      lines.push(`✨  ${this.baseMessage.trim()}`);
+      lines.push('');
+    }
+
+    if (this.items.size > 0) {
+      this.getSortedItems().forEach(item => {
+        const icon = this.getCleanStatusIcon(item);
+        const spinner = this.getProgressIcon(item);
+
+        lines.push(`${icon}  ${item.text}${spinner}`);
+
+        if (item.caption) {
+          lines.push(`      ${item.caption}`);
+        }
+      });
+
+      const total = this.items.size;
+      const done = this.getSortedItems().filter(i => i.status === 'completed' || i.status === 'error').length;
+      const barWidth = 10;
+      const filled = Math.round((done / total) * barWidth);
+      const bar = '▰'.repeat(filled) + '▱'.repeat(barWidth - filled);
+
+      lines.push('');
+      lines.push(`${bar}  ${done} / ${total}`);
+    }
+
+    return lines.join('\n').trim();
+  }
+
+  private getCleanStatusIcon(item: ProgressiveItem): string {
+    switch (item.status) {
+      case 'pending': return '⬜';
+      case 'active': return '⏳';
+      case 'completed': return '✅';
+      case 'error': return '❌';
+      default: return '⬜';
+    }
+  }
+
+  private getNeoProgressBar(item: ProgressiveItem): string {
+    const filled = '▓';
+    const empty = '░';
+    const width = 8;
+
+    switch (item.status) {
+      case 'completed':
+      case 'error':
+        return filled.repeat(width);
+      case 'active':
+        return filled.repeat(4) + empty.repeat(4);
+      case 'pending':
+      default:
+        return empty.repeat(width);
+    }
   }
 
   /**
