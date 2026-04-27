@@ -38,6 +38,19 @@ export class InlineKeyboard {
     return this;
   }
 
+  /**
+   * Appends with expression
+   * @param rows The rows to append
+   * @param condition The condition to evaluate
+   * @returns The InlineKeyboard instance
+   */
+  appendWhen(rows: any[][] | any[] | any, condition: boolean): InlineKeyboard {
+    if (condition) {
+      this.appendArray(Array.isArray(rows[0]) ? rows : [rows]);
+    }
+    return this;
+  }
+
   appendArray(rows: any[][]): InlineKeyboard {
     rows.forEach(row => this.append(row));
     return this;
