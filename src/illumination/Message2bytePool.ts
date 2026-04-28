@@ -8,6 +8,9 @@ export default class Message2bytePool {
     private ctx: Telegraf2byteContext;
     private messageValue: string = "";
     private section: Section | undefined;
+    private lastTimeSent: number = 0;
+    private sendInterval: number = 800; // Minimum interval between sends in milliseconds
+    private timerDeferedSend: NodeJS.Timeout | null = null;
     public messageId: number | null = null;
 
     static init(message2byte: Message2byte, ctx: Telegraf2byteContext, section?: Section) {
@@ -69,6 +72,17 @@ export default class Message2bytePool {
     }
 
     async send() {
+        if (this.checkIsRateLimited()) {
+            this.lastTimeSent = Date.now();
+            console.warn("Message2bytePool: Skipping send to prevent spamming. Please wait before sending again.");
+            if (!this.timerDeferedSend) {
+                this.timerDeferedSend = setTimeout(() => {
+                    this.timerDeferedSend = null;
+                    this.send();
+                }, this.sendInterval);
+            }
+            return; // Skip sending if called too soon
+        }
 
         const entity = await this.message2byte.send();
 
@@ -114,5 +128,10 @@ export default class Message2bytePool {
           resolve();
         }, ms);
       });
+    }
+
+    private checkIsRateLimited(): boolean {
+        const now = Date.now();
+        return (now - this.lastTimeSent) < this.sendInterval;
     }
 }
