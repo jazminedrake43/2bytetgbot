@@ -11,6 +11,7 @@ export default class Message2bytePool {
     private lastTimeSent: number = 0;
     private sendInterval: number = 800; // Minimum interval between sends in milliseconds
     private timerDeferedSend: NodeJS.Timeout | null = null;
+    private firstLaunch: boolean = false;
     public messageId: number | null = null;
 
     static init(message2byte: Message2byte, ctx: Telegraf2byteContext, section?: Section) {
@@ -22,6 +23,7 @@ export default class Message2bytePool {
         this.message2byte.setNotAnswerCbQuery();
         this.ctx = ctx;
         this.section = section;
+        this.firstLaunch = true;
     }
 
     markdown(): this {
@@ -73,23 +75,25 @@ export default class Message2bytePool {
 
     async send() {
         if (this.checkIsRateLimited()) {
-            this.lastTimeSent = Date.now();
-            console.warn("Message2bytePool: Skipping send to prevent spamming. Please wait before sending again.");
+            // console.warn("Message2bytePool: Skipping send to prevent spamming. Please wait before sending again.");
             if (!this.timerDeferedSend) {
-                this.timerDeferedSend = setTimeout(() => {
+                this.timerDeferedSend = setTimeout(async () => {
                     this.timerDeferedSend = null;
-                    this.send();
+                    await this.send();
                 }, this.sendInterval);
             }
             return; // Skip sending if called too soon
         }
 
+        this.lastTimeSent = Date.now();
+
         const entity = await this.message2byte.send();
 
         if (typeof entity === "object" && entity.message_id) {
             this.messageId = entity.message_id;
-            if (this.messageId) {
+            if (this.firstLaunch && this.messageId) {
                 this.message2byte.setMessageId(this.messageId);
+                this.firstLaunch = false;
             }
             // console.log("Pool message sent with ID:", this.messageId);
         }

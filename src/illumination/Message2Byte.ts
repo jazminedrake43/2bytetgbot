@@ -191,7 +191,7 @@ export default class Message2byte {
   }
 
   async send() {
-    // console.log("Sending message:", this.messageValue, ' Extra:', this.messageExtra, 'IsUpdate:', this.isUpdate);
+    // console.log("Sending message:", this.messageValue.substring(0, 100), ' Extra:', this.messageExtra, 'IsUpdate:', this.isUpdate);
     if (this.isUpdate) {
       if (this.section && this.section.route.runIsCallbackQuery && this.doAnswerCbQuery) {
         await this.ctx.answerCbQuery();
@@ -252,5 +252,9 @@ export default class Message2byte {
     this.messageId = messageId;
     this.messageExtra.message_id = messageId;
     return this;
+  }
+
+  public getMessageId(): number | null {
+    return this.messageId;
   }
 }
